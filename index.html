@@ -99,12 +99,12 @@
       return (
         <button onClick={onClick} disabled={disabled} className={`flex-1 p-4 rounded-xl border flex flex-col items-center gap-3 btn-touch ${disabled ? 'opacity-40 cursor-not-allowed' : ''} ${active ? `${activeColorClass} border-transparent` : "bg-slate-800 border-white/5 text-slate-400"}`}>
           <span className="text-4xl">{emoji}</span>
-          <span className="text-[11px] font-bold uppercase tracking-widest text-white">{label}</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-white text-center">{label}</span>
         </button>
       );
     }
 
-    // --- DİJİİZ & 2D TERMAL ISI HARİTASI ---
+    // --- DİJİTAL İKİZ & 2D TERMAL ISI HARİTASI ---
     function GreenhouseVisualizer({ left, right }) {
       const [showMap, setShowMap] = useState(false);
 
@@ -243,8 +243,8 @@
       const isTempLow = temp < targetTemp;
       const isHumHigh = hum > targetHum;
       const isHumLow = hum < targetHum;
-      const isSoilDry = soil < targetSoil - 1; // Alt sınır kontrolü
-      const isSoilWet = soil > targetSoil + 1; // Üst sınır kontrolü
+      const isSoilDry = soil < targetSoil - 1; 
+      const isSoilWet = soil > targetSoil + 1; 
 
       // Gerçek zamanlı saat kontrolü ve kalan süre hesabı
       const now = new Date();
@@ -280,7 +280,6 @@
          if (pump) {
             statusMessages.push(<div key="sch" className="text-indigo-400 flex items-center gap-2"><span className="animate-pulse text-xl">⏰</span> Zamanlanmış Sulama Yapılıyor...</div>);
          } else {
-            // Hedefe ulaşıldığı için pompa durduysa
             statusMessages.push(<div key="sch_ok" className="text-emerald-400 flex items-center gap-2"><span className="text-xl">✅</span> Zamanlanmış Sulama Tamamlandı.</div>);
          }
       }
@@ -324,8 +323,8 @@
             </h3>
             {!autoMode && (
               <div className="flex gap-4 mb-5">
-                <SimpleToggle label="Su Pompası" emoji="🚰" active={pump} disabled={waterLow} onClick={() => onUpdate(`${zoneKey}_pump`, !pump)} activeColorClass="bg-blue-600 text-white" />
-                <SimpleToggle label="Egzoz Fanı" emoji="🌀" active={fan} onClick={() => onUpdate(`${zoneKey}_fan`, !fan)} activeColorClass="bg-cyan-600 text-white" />
+                <SimpleToggle label={zoneKey === 'left' ? "Sol Su Motoru" : "Sağ Su Motoru"} emoji="🚰" active={pump} disabled={waterLow} onClick={() => onUpdate(`${zoneKey}_pump`, !pump)} activeColorClass="bg-blue-600 text-white" />
+                <SimpleToggle label={zoneKey === 'left' ? "Sol Fan" : "Sağ Fan"} emoji="🌀" active={fan} onClick={() => onUpdate(`${zoneKey}_fan`, !fan)} activeColorClass="bg-cyan-600 text-white" />
               </div>
             )}
             <div className="grid grid-cols-3 gap-3">
@@ -334,7 +333,7 @@
                <TargetAdjuster label="İdeal Toprak (±%1)" value={`${targetSoil - 1}-${targetSoil + 1}`} unit="%" onDecrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.max(20, targetSoil - 1))} onIncrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.min(90, targetSoil + 1))} />
             </div>
 
-            {/* ZAMANLANMIŞ SULAMA EKLENTİSİ (CANLI GERİ SAYIMLI) */}
+            {/* ZAMANLANMIŞ SULAMA EKLENTİSİ */}
             <div className="mt-4 flex items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-white/5">
               <div className="flex items-center gap-4">
                 <div className="text-3xl drop-shadow-[0_0_10px_rgba(79,70,229,0.5)]">⏰</div>
@@ -386,9 +385,13 @@
       const [loggedIn, setLoggedIn] = useState(false);
       const [errorMsg, setErrorMsg] = useState("");
 
-      // scheduleActive varsayılan olarak true (Aktif) bırakıldı
-      const defaultZone = { temp: 24, hum: 45, soil: 60, pump: false, fan: false, targetTemp: 26, targetHum: 50, targetSoil: 60, scheduledTime: "12:00", scheduleActive: true };
-      const [sera, setSera] = useState({ auto: false, waterLevel: 80, left: { ...defaultZone }, right: { ...defaultZone } });
+      // Her bölgenin varsayılan hedefleri ve SULAMA SAATLERİ artık birbirinden tamamen BAĞIMSIZ!
+      const [sera, setSera] = useState({ 
+        auto: false, 
+        waterLevel: 80, 
+        left: { temp: 24, hum: 45, soil: 60, pump: false, fan: false, targetTemp: 26, targetHum: 50, targetSoil: 60, scheduledTime: "08:30", scheduleActive: true }, 
+        right: { temp: 22, hum: 50, soil: 55, pump: false, fan: false, targetTemp: 24, targetHum: 55, targetSoil: 55, scheduledTime: "19:00", scheduleActive: true } 
+      });
 
       const seraRef = useRef(sera);
       useEffect(() => { seraRef.current = sera; }, [sera]);
@@ -422,14 +425,18 @@
               };
 
               const parseZone = (prefix) => {
-                let t = gv(`${prefix}_temp`, 24); if (t > 80 || t < -10) t = 24; 
-                let h = gv(`${prefix}_hum`, 45); if (h > 100 || h < 0) h = 45;
-                let s = gv(`${prefix}_soil`, 60); if (s > 100 || s < 0) s = 60;
+                // Sol ve Sağ bölge sensör okumaları ve hedefleri birbirine karışmaması için ayrı Fallback'ler tanımlandı.
+                let t = gv(`${prefix}_temp`, prefix === 'left' ? 24 : 22); if (t > 80 || t < -10) t = prefix === 'left' ? 24 : 22; 
+                let h = gv(`${prefix}_hum`, prefix === 'left' ? 45 : 50); if (h > 100 || h < 0) h = prefix === 'left' ? 45 : 50;
+                let s = gv(`${prefix}_soil`, prefix === 'left' ? 60 : 55); if (s > 100 || s < 0) s = prefix === 'left' ? 60 : 55;
                 return {
                   temp: t, hum: h, soil: s,
                   pump: gv(`${prefix}_pump`, false), fan: gv(`${prefix}_fan`, false),
-                  targetTemp: gv(`${prefix}_targetTemp`, 26), targetHum: gv(`${prefix}_targetHum`, 50), targetSoil: gv(`${prefix}_targetSoil`, 60),
-                  scheduledTime: gv(`${prefix}_scheduledTime`, "12:00"), scheduleActive: gv(`${prefix}_scheduleActive`, true) // Varsayılan aktif
+                  targetTemp: gv(`${prefix}_targetTemp`, prefix === 'left' ? 26 : 24), 
+                  targetHum: gv(`${prefix}_targetHum`, prefix === 'left' ? 50 : 55), 
+                  targetSoil: gv(`${prefix}_targetSoil`, prefix === 'left' ? 60 : 55),
+                  scheduledTime: gv(`${prefix}_scheduledTime`, prefix === 'left' ? "08:30" : "19:00"), // Bağımsız saatler!
+                  scheduleActive: gv(`${prefix}_scheduleActive`, true)
                 };
               };
               setSera({ auto: gv("auto", false), waterLevel: gv("waterLevel", 80), left: parseZone("left"), right: parseZone("right") });
@@ -472,32 +479,32 @@
               if (t > targetTemp || h > targetHum) fan = true;
               else if (t <= targetTemp && h <= targetHum) fan = false;
               
+              // İlgili motor SADECE kendi bölgesi kurursa çalışır
               if (s < targetSoil - 1 || h < targetHum) pump = true;
               else if (s >= targetSoil + 1 && h >= targetHum) pump = false;
             }
 
-            // 2. Zamanlanmış Sulama Mantığı (Saati geldiğinde hedefe ulaşana kadar sular)
+            // 2. Zamanlanmış Sulama Mantığı
             if (scheduleActive && scheduledTime === currentHHMM) {
                if (s < targetSoil + 1) {
-                   pump = true; // Hedefe gelene kadar açık tut
+                   pump = true; 
                } else {
-                   pump = false; // O dakika bitmemiş olsa bile hedefe ulaştığı için zorla kapat
+                   pump = false; 
                }
             }
 
-            // 3. Akıllı Güvenlik Kapatması (Sistem Manuel modda veya farklı bir saatte olsa bile)
-            // Eğer toprak nemi hedefin üst sınırını aştıysa, su basmaması için pompayı kapatır.
+            // 3. Akıllı Güvenlik Kapatması
             if (!current.auto && s >= targetSoil + 1) {
                pump = false;
             }
 
-            // Güvenlik: Su bittiyse her halükarda pompalar durur
+            // Güvenlik: Ana depoda su bittiyse iki motor da durur
             if (waterLow && pump) pump = false;
 
             // Simülasyon Değer Güncellemeleri
             if (pump) {
               s += 1.5; h += 2; 
-              if (newWaterLevel > 0) newWaterLevel -= 0.5; 
+              if (newWaterLevel > 0) newWaterLevel -= 0.5; // Hangi motor çalışırsa çalışsın ana depodan su harcanır
             } else if (s > 20 && Math.random() > 0.5) s -= 0.5; 
 
             if (fan) { t -= 1; h -= 1; } 
@@ -506,7 +513,6 @@
               if (h > 30 && Math.random() > 0.7) h -= 0.5; 
             }
 
-            // Yapay Zeka Dengelemesi (Sadece Otonomda geçerli)
             if (current.auto) {
                if (Math.abs(t - targetTemp) <= 1 && !fan) t = targetTemp;
                if (Math.abs(h - targetHum) <= 2 && !fan && !pump) h = targetHum;
