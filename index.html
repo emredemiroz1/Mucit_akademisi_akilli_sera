@@ -104,7 +104,7 @@
       );
     }
 
-    // --- DİJİTAL İKİZ & 2D TERMAL ISI HARİTASI ---
+    // --- DİJİİZ & 2D TERMAL ISI HARİTASI ---
     function GreenhouseVisualizer({ left, right }) {
       const [showMap, setShowMap] = useState(false);
 
@@ -277,7 +277,12 @@
 
       // Eğer zamanlanmış sulama o an gerçekleşiyorsa en üste uyarı ekle
       if (isScheduledNow && !waterLow) {
-         statusMessages.push(<div key="sch" className="text-indigo-400 flex items-center gap-2"><span className="animate-pulse text-xl">⏰</span> Zamanlanmış Sulama Yapılıyor...</div>);
+         if (pump) {
+            statusMessages.push(<div key="sch" className="text-indigo-400 flex items-center gap-2"><span className="animate-pulse text-xl">⏰</span> Zamanlanmış Sulama Yapılıyor...</div>);
+         } else {
+            // Hedefe ulaşıldığı için pompa durduysa
+            statusMessages.push(<div key="sch_ok" className="text-emerald-400 flex items-center gap-2"><span className="text-xl">✅</span> Zamanlanmış Sulama Tamamlandı.</div>);
+         }
       }
 
       if (autoMode) {
@@ -293,13 +298,13 @@
         if (pump && !isHumLow && !waterLow && !isScheduledNow) statusMessages.push(<div key="s" className="text-blue-400 flex items-center gap-2"><span className="animate-bounce">💧</span> Sulama Yapılıyor (Hedef: %{targetSoil + 1})...</div>);
         else if (isSoilDry && waterLow) statusMessages.push(<div key="sw" className="text-red-400 flex items-center gap-2"><span>⚠️</span> Toprak Kuru! Ancak SU DEPOSU BOŞ!</div>);
         
-        if (!isTempHigh && !isTempLow && !isHumHigh && !isHumLow && !isSoilDry && !pump) {
+        if (!isTempHigh && !isTempLow && !isHumHigh && !isHumLow && !isSoilDry && !pump && !isScheduledNow) {
           statusMessages.push(<div key="ok" className="text-emerald-400 flex items-center gap-2"><span>✅</span> Ortam Değerleri İdeal Seviyede.</div>);
         }
       } else {
-        if (pump) statusMessages.push(<div key="mp" className="text-blue-400 flex items-center gap-2">💧 Manuel Sulama/Nemlendirme Aktif...</div>);
+        if (pump && !isScheduledNow) statusMessages.push(<div key="mp" className="text-blue-400 flex items-center gap-2">💧 Manuel Sulama/Nemlendirme Aktif...</div>);
         if (fan) statusMessages.push(<div key="mf" className="text-cyan-400 flex items-center gap-2"><span className="animate-spin">🌀</span> Manuel Fan Aktif...</div>);
-        if (!pump && !fan) statusMessages.push(<div key="mn" className="text-slate-400 flex items-center gap-2">🔧 Sistem Manuel Beklemede.</div>);
+        if (!pump && !fan && !isScheduledNow) statusMessages.push(<div key="mn" className="text-slate-400 flex items-center gap-2">🔧 Sistem Manuel Beklemede.</div>);
       }
 
       return (
@@ -352,7 +357,7 @@
                         ⏳ {hrsLeft > 0 ? `${hrsLeft} saat ` : ''}{minsLeft} dk kaldı
                       </div>
                     )}
-                    {scheduleActive && diffMins === 0 && (
+                    {scheduleActive && diffMins === 0 && pump && (
                       <div className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">
                         💦 Sulama yapılıyor
                       </div>
@@ -462,22 +467,34 @@
             const z = current[zKey];
             let { temp: t, hum: h, soil: s, pump, fan, targetTemp, targetHum, targetSoil, scheduledTime, scheduleActive } = z;
 
+            // 1. Otonom Kontroller (Isı, Hava Nemi ve Histerezisli Toprak Nemi)
             if (current.auto) {
               if (t > targetTemp || h > targetHum) fan = true;
               else if (t <= targetTemp && h <= targetHum) fan = false;
               
-              // Histerezis (±%1 Hata Payı) Sulama Mantığı
               if (s < targetSoil - 1 || h < targetHum) pump = true;
               else if (s >= targetSoil + 1 && h >= targetHum) pump = false;
             }
 
-            // Zamanlanmış Sulama (Saati geldiğinde pompayı zorla açar)
+            // 2. Zamanlanmış Sulama Mantığı (Saati geldiğinde hedefe ulaşana kadar sular)
             if (scheduleActive && scheduledTime === currentHHMM) {
-               pump = true;
+               if (s < targetSoil + 1) {
+                   pump = true; // Hedefe gelene kadar açık tut
+               } else {
+                   pump = false; // O dakika bitmemiş olsa bile hedefe ulaştığı için zorla kapat
+               }
             }
 
+            // 3. Akıllı Güvenlik Kapatması (Sistem Manuel modda veya farklı bir saatte olsa bile)
+            // Eğer toprak nemi hedefin üst sınırını aştıysa, su basmaması için pompayı kapatır.
+            if (!current.auto && s >= targetSoil + 1) {
+               pump = false;
+            }
+
+            // Güvenlik: Su bittiyse her halükarda pompalar durur
             if (waterLow && pump) pump = false;
 
+            // Simülasyon Değer Güncellemeleri
             if (pump) {
               s += 1.5; h += 2; 
               if (newWaterLevel > 0) newWaterLevel -= 0.5; 
@@ -489,11 +506,10 @@
               if (h > 30 && Math.random() > 0.7) h -= 0.5; 
             }
 
+            // Yapay Zeka Dengelemesi (Sadece Otonomda geçerli)
             if (current.auto) {
                if (Math.abs(t - targetTemp) <= 1 && !fan) t = targetTemp;
                if (Math.abs(h - targetHum) <= 2 && !fan && !pump) h = targetHum;
-               // NOT: Toprak (s) için yapay kitlemeyi sildik. 
-               // Böylece değer alt sınır ile üst sınır arasında doğal salınım yapacak.
             }
 
             t = Math.max(10, Math.min(t, 55)); h = Math.max(10, Math.min(h, 95)); s = Math.max(0, Math.min(s, 100));
