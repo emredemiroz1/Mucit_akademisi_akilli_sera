@@ -74,22 +74,22 @@
       else colorClass = "border-emerald-500/30 bg-emerald-500/10 text-emerald-50";
 
       return (
-        <div className={`rounded-xl p-4 flex flex-col items-center justify-center border transition-colors ${colorClass}`}>
-          <div className="text-3xl mb-2">{emoji}</div>
-          <div className="text-[11px] font-bold uppercase tracking-widest opacity-70 mb-1">{title}</div>
-          <div className="text-3xl font-black">{value}<span className="text-sm opacity-60 ml-1">{unit}</span></div>
+        <div className={`rounded-xl p-3 flex flex-col items-center justify-center border transition-colors ${colorClass}`}>
+          <div className="text-xl mb-1">{emoji}</div>
+          <div className="text-[9px] font-bold uppercase tracking-widest opacity-70 mb-1">{title}</div>
+          <div className="text-xl font-black">{value}<span className="text-xs opacity-60 ml-1">{unit}</span></div>
         </div>
       );
     }
 
     function TargetAdjuster({ label, value, unit, onDecrease, onIncrease }) {
       return (
-        <div className="flex flex-col items-center bg-slate-900/50 p-3 rounded-xl border border-white/5">
-          <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-3">{label}</div>
+        <div className="flex flex-col items-center bg-slate-900/50 p-2 rounded-xl border border-white/5">
+          <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-2">{label}</div>
           <div className="flex items-center justify-between w-full gap-2">
-            <button onClick={onDecrease} className="w-8 h-8 flex items-center justify-center bg-slate-700 rounded-lg text-lg font-bold btn-touch hover:bg-slate-600">-</button>
-            <span className="text-lg font-black">{value}{unit}</span>
-            <button onClick={onIncrease} className="w-8 h-8 flex items-center justify-center bg-slate-700 rounded-lg text-lg font-bold btn-touch hover:bg-slate-600">+</button>
+            <button onClick={onDecrease} className="w-7 h-7 flex items-center justify-center bg-slate-700 rounded-lg text-sm font-bold btn-touch hover:bg-slate-600">-</button>
+            <span className="text-sm font-black">{value}{unit}</span>
+            <button onClick={onIncrease} className="w-7 h-7 flex items-center justify-center bg-slate-700 rounded-lg text-sm font-bold btn-touch hover:bg-slate-600">+</button>
           </div>
         </div>
       );
@@ -97,9 +97,9 @@
 
     function SimpleToggle({ active, onClick, disabled, label, emoji, activeColorClass }) {
       return (
-        <button onClick={onClick} disabled={disabled} className={`flex-1 p-4 rounded-xl border flex flex-col items-center gap-3 btn-touch ${disabled ? 'opacity-40 cursor-not-allowed' : ''} ${active ? `${activeColorClass} border-transparent` : "bg-slate-800 border-white/5 text-slate-400"}`}>
-          <span className="text-4xl">{emoji}</span>
-          <span className="text-[11px] font-bold uppercase tracking-widest text-white">{label}</span>
+        <button onClick={onClick} disabled={disabled} className={`flex-1 p-3 rounded-xl border flex flex-col items-center gap-2 btn-touch ${disabled ? 'opacity-40 cursor-not-allowed' : ''} ${active ? `${activeColorClass} border-transparent` : "bg-slate-800 border-white/5 text-slate-400"}`}>
+          <span className="text-2xl">{emoji}</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white">{label}</span>
         </button>
       );
     }
@@ -110,7 +110,6 @@
 
       const avgTemp = (left.temp + right.temp) / 2;
       const avgHum = (left.hum + right.hum) / 2;
-      const avgSoil = (left.soil + right.soil) / 2; // Toprak ortalaması eklendi
 
       // Termal Kamera Renk Hesaplayıcı
       const getHeatmapColor = (temp, alpha = 1) => {
@@ -124,9 +123,10 @@
       // 2D Isı Haritası Arka Plan Stili
       const heatmapStyle = {
         background: `
-          radial-gradient(circle at 20% 50%, ${getHeatmapColor(left.temp, 0.8)} 0%, transparent 65%),
-          radial-gradient(circle at 80% 50%, ${getHeatmapColor(right.temp, 0.8)} 0%, transparent 65%),
-          radial-gradient(circle at 50% 50%, ${getHeatmapColor(avgTemp, 0.8)} 0%, transparent 65%)
+          radial-gradient(circle at 20% 40%, ${getHeatmapColor(left.temp, 0.8)} 0%, transparent 65%),
+          radial-gradient(circle at 80% 40%, ${getHeatmapColor(right.temp, 0.8)} 0%, transparent 65%),
+          radial-gradient(circle at 50% 15%, ${getHeatmapColor(avgTemp + 0.4, 0.8)} 0%, transparent 65%),
+          radial-gradient(circle at 50% 85%, ${getHeatmapColor(avgTemp - 0.3, 0.8)} 0%, transparent 65%)
         `,
         backgroundColor: getHeatmapColor(avgTemp, 0.3), // Taban rengi
         filter: 'blur(15px)', // Renkleri birbirine yedirir
@@ -134,11 +134,22 @@
         transition: 'opacity 1s ease-in-out'
       };
 
-      // Birleştirilmiş Ölçüm İstasyonları (SOL, MERKEZ, SAĞ)
-      const combinedSensors = [
-        { key: 'SOL',    t: left.temp.toFixed(1),       h: left.hum.toFixed(1),       s: left.soil.toFixed(1),       top: '48%', left: '20%' },
-        { key: 'MERKEZ', t: avgTemp.toFixed(1),         h: avgHum.toFixed(1),         s: avgSoil.toFixed(1),         top: '48%', left: '50%' },
-        { key: 'SAĞ',    t: right.temp.toFixed(1),      h: right.hum.toFixed(1),      s: right.soil.toFixed(1),      top: '48%', left: '80%' }
+      // Havadaki Isı ve Nem (DHT11) Sensörleri
+      const airSensors = [
+        { key: 'KUZEY',  t: (avgTemp + 0.4).toFixed(1), h: (avgHum - 1.2).toFixed(1), top: '25%', left: '50%' },
+        { key: 'GÜNEY',  t: (avgTemp - 0.3).toFixed(1), h: (avgHum + 0.8).toFixed(1), top: '65%', left: '50%' },
+        { key: 'DOĞU',   t: right.temp.toFixed(1),      h: right.hum.toFixed(1),      top: '45%', left: '80%' },
+        { key: 'BATI',   t: left.temp.toFixed(1),       h: left.hum.toFixed(1),       top: '45%', left: '20%' },
+        { key: 'MERKEZ', t: avgTemp.toFixed(1),         h: avgHum.toFixed(1),         top: '45%', left: '50%' }
+      ];
+
+      // Toprak Nem Sensörleri
+      const soilSensors = [
+        { key: 'SOL-1',  s: (left.soil - 1.5).toFixed(1),               top: '80%', left: '25%' },
+        { key: 'SOL-2',  s: (left.soil + 1.2).toFixed(1),               top: '92%', left: '35%' },
+        { key: 'MERKEZ', s: ((left.soil + right.soil) / 2).toFixed(1),  top: '85%', left: '50%' },
+        { key: 'SAĞ-1',  s: (right.soil - 2.1).toFixed(1),              top: '80%', left: '75%' },
+        { key: 'SAĞ-2',  s: (right.soil + 0.8).toFixed(1),              top: '92%', left: '65%' }
       ];
 
       const ZoneVisual = ({ title, data, isMapActive }) => {
@@ -163,24 +174,24 @@
         const iconOpacityClass = isMapActive ? "opacity-0 scale-50" : "opacity-90 scale-100";
 
         return (
-          <div className="flex-1 relative flex flex-col h-full rounded-[24px] overflow-hidden border border-white/10 transition-all duration-700 z-10">
+          <div className="flex-1 relative flex flex-col h-full rounded-[18px] overflow-hidden border border-white/10 transition-all duration-700 z-10">
             <div className={`flex-1 flex flex-col items-center justify-center relative transition-colors duration-700 ${airBg}`}>
-              <div className="absolute top-3 left-3 text-xs font-black text-white/50">{title}</div>
+              <div className="absolute top-2 left-2 text-[9px] font-black text-white/50">{title}</div>
               
-              <div className={`text-6xl transition-all duration-500 ${data.fan && !isMapActive ? 'animate-spin text-cyan-400' : ''} ${iconOpacityClass}`}>
+              <div className={`text-4xl transition-all duration-500 ${data.fan && !isMapActive ? 'animate-spin text-cyan-400' : ''} ${iconOpacityClass}`}>
                 {data.fan ? '🌀' : isHot ? '🔥' : isCold ? '☀️' : '✅'}
               </div>
-              <div className={`text-[10px] font-bold mt-3 tracking-widest uppercase text-center transition-all duration-500 ${iconOpacityClass}`}>
+              <div className={`text-[8px] font-bold mt-2 tracking-widest uppercase text-center transition-all duration-500 ${iconOpacityClass}`}>
                 {data.fan ? 'Soğutuluyor/Tahliye' : isHot ? 'Sıcak' : isCold ? 'Doğal Isınma' : 'İdeal Hava'}
               </div>
             </div>
             
             <div className={`h-1/3 relative flex flex-col items-center justify-center transition-colors duration-700 ${soilBg} ${isMapActive ? 'border-t border-white/5' : 'border-t border-white/10'}`}>
-              <div className={`absolute -top-5 text-3xl transition-all duration-300 ${data.pump && !isMapActive ? 'text-blue-400 animate-bounce opacity-100' : 'opacity-0'}`}>💧</div>
-              <div className={`text-5xl transition-all duration-500 ${iconOpacityClass}`}>
+              <div className={`absolute -top-4 text-xl transition-all duration-300 ${data.pump && !isMapActive ? 'text-blue-400 animate-bounce opacity-100' : 'opacity-0'}`}>💧</div>
+              <div className={`text-2xl transition-all duration-500 ${iconOpacityClass}`}>
                 {isDry ? '🏜️' : data.pump ? '🌧️' : '🪴'}
               </div>
-              <div className={`text-[10px] font-bold mt-2 tracking-widest uppercase transition-all duration-500 ${iconOpacityClass}`}>
+              <div className={`text-[8px] font-bold mt-1 tracking-widest uppercase transition-all duration-500 ${iconOpacityClass}`}>
                 {isDry ? 'Toprak Kuru' : data.pump ? 'Sulanıyor/Nem' : 'Toprak Nemli'}
               </div>
             </div>
@@ -189,36 +200,36 @@
       };
 
       return (
-        <div className="mb-10 w-full max-w-[700px] mx-auto animate-[fadeIn_0.5s_ease-out]">
+        <div className="mb-10 w-full max-w-[500px] mx-auto animate-[fadeIn_0.5s_ease-out]">
           
           <div className="flex justify-between items-center mb-3 px-2">
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <span>👁️</span> 2.5D Dijital Sera İkizi
             </div>
             <button 
               onClick={() => setShowMap(!showMap)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all border btn-touch flex items-center gap-2 ${showMap ? 'bg-orange-600 border-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.4)]' : 'bg-slate-800 border-white/10 text-slate-300 hover:bg-slate-700'}`}
+              className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all border btn-touch flex items-center gap-1 ${showMap ? 'bg-orange-600 border-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.4)]' : 'bg-slate-800 border-white/10 text-slate-300 hover:bg-slate-700'}`}
             >
               <span>{showMap ? 'Haritayı Gizle' : '🔍 Termal Harita'}</span>
             </button>
           </div>
 
-          <div className="w-full aspect-[4/3] bg-slate-900/90 rounded-[32px] border-4 border-slate-800 p-3 shadow-[0_0_40px_rgba(0,0,0,0.4)] flex flex-col relative overflow-hidden">
+          <div className="w-full aspect-square bg-slate-900/90 rounded-[32px] border-4 border-slate-800 p-2 shadow-[0_0_40px_rgba(0,0,0,0.4)] flex flex-col relative overflow-hidden">
              
              {/* Sera Çatısı */}
-             <div className="h-[15%] w-full relative overflow-hidden flex items-end justify-center pb-3 z-20">
-               <div className="absolute inset-x-6 top-3 bottom-0 bg-gradient-to-t from-white/5 to-transparent rounded-t-[100px] border border-b-0 border-white/10"></div>
-               <div className="w-20 h-1.5 bg-yellow-500/40 rounded-full shadow-[0_0_20px_rgba(234,179,8,0.6)]"></div>
+             <div className="h-[15%] w-full relative overflow-hidden flex items-end justify-center pb-2 z-20">
+               <div className="absolute inset-x-4 top-2 bottom-0 bg-gradient-to-t from-white/5 to-transparent rounded-t-[100px] border border-b-0 border-white/10"></div>
+               <div className="w-16 h-1 bg-yellow-500/40 rounded-full shadow-[0_0_20px_rgba(234,179,8,0.6)]"></div>
              </div>
              
              {/* İç Bölüm */}
-             <div className="flex-1 flex gap-3 pt-3 pb-2 px-2 relative">
+             <div className="flex-1 flex gap-2 pt-2 pb-1 px-1 relative">
                
                {/* 2D TERMAL ISI HARİTASI (ARKAPLAN) */}
-               <div className="absolute inset-0 rounded-2xl z-0" style={heatmapStyle}></div>
+               <div className="absolute inset-0 rounded-xl z-0" style={heatmapStyle}></div>
 
                <ZoneVisual title="SOL BÖLGE" data={left} isMapActive={showMap} />
-               <div className="absolute top-3 bottom-2 left-1/2 -translate-x-1/2 w-2 bg-slate-800 rounded-full border border-white/5 z-10 shadow-lg"></div>
+               <div className="absolute top-2 bottom-1 left-1/2 -translate-x-1/2 w-1.5 bg-slate-800 rounded-full border border-white/5 z-10 shadow-lg"></div>
                <ZoneVisual title="SAĞ BÖLGE" data={right} isMapActive={showMap} />
                
                {/* SENSÖR VERİ ETİKETLERİ (OVERLAY) */}
@@ -226,19 +237,19 @@
                  
                  {/* Hava Sensörleri (DHT11) */}
                  {airSensors.map((sensor) => (
-                    <div key={sensor.key} className="absolute transform -translate-x-1/2 -translate-y-1/2 bg-slate-900/80 backdrop-blur-md border border-cyan-500/40 rounded-xl px-3 py-2 shadow-2xl flex flex-col items-center" style={{ top: sensor.top, left: sensor.left }}>
-                      <div className="text-[10px] text-cyan-400 font-black tracking-widest mb-1">{sensor.key}</div>
-                      <div className="text-sm font-black text-white whitespace-nowrap">
-                        {sensor.t}°C <span className="opacity-40 font-normal mx-1">|</span> %{sensor.h}
+                    <div key={sensor.key} className="absolute transform -translate-x-1/2 -translate-y-1/2 bg-slate-900/80 backdrop-blur-md border border-cyan-500/40 rounded-lg px-2 py-1 shadow-2xl flex flex-col items-center" style={{ top: sensor.top, left: sensor.left }}>
+                      <div className="text-[7px] text-cyan-400 font-black tracking-widest">{sensor.key}</div>
+                      <div className="text-[10px] font-black text-white whitespace-nowrap">
+                        {sensor.t}°C <span className="opacity-40 font-normal">|</span> %{sensor.h}
                       </div>
                     </div>
                  ))}
 
                  {/* Toprak Sensörleri */}
                  {soilSensors.map((sensor) => (
-                    <div key={sensor.key} className="absolute transform -translate-x-1/2 -translate-y-1/2 bg-slate-900/80 backdrop-blur-md border border-red-500/40 rounded-xl px-3 py-2 shadow-2xl flex flex-col items-center" style={{ top: sensor.top, left: sensor.left }}>
-                      <div className="text-[10px] text-red-400 font-black tracking-widest mb-1">{sensor.key}</div>
-                      <div className="text-sm font-black text-white whitespace-nowrap">
+                    <div key={sensor.key} className="absolute transform -translate-x-1/2 -translate-y-1/2 bg-slate-900/80 backdrop-blur-md border border-red-500/40 rounded-lg px-2 py-1 shadow-2xl flex flex-col items-center" style={{ top: sensor.top, left: sensor.left }}>
+                      <div className="text-[7px] text-red-400 font-black tracking-widest">{sensor.key}</div>
+                      <div className="text-[10px] font-black text-white whitespace-nowrap">
                         %{sensor.s}
                       </div>
                     </div>
@@ -252,7 +263,7 @@
     }
 
     function ZoneCard({ zoneKey, title, data, onUpdate, autoMode, waterLow }) {
-      const { temp, hum, soil, targetTemp, targetHum, targetSoil, pump, fan, scheduledTime, scheduleActive } = data;
+      const { temp, hum, soil, targetTemp, targetHum, targetSoil, pump, fan } = data;
 
       const isTempHigh = temp > targetTemp;
       const isTempLow = temp < targetTemp;
@@ -261,17 +272,7 @@
       const isSoilDry = soil < targetSoil;
       const isSoilWet = soil > targetSoil;
 
-      const now = new Date();
-      const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      const isScheduledNow = scheduleActive && scheduledTime === currentHHMM;
-
       let statusMessages = [];
-
-      // Eğer zamanlanmış sulama o an gerçekleşiyorsa en üste uyarı ekle
-      if (isScheduledNow && !waterLow) {
-         statusMessages.push(<div key="sch" className="text-indigo-400 flex items-center gap-2"><span className="animate-pulse text-xl">⏰</span> Zamanlanmış Sulama Yapılıyor...</div>);
-      }
-
       if (autoMode) {
         if (isTempHigh) statusMessages.push(<div key="t" className="text-cyan-400 flex items-center gap-2"><span className="animate-spin">🌀</span> Sıcaklık Yüksek! Fan Devrede.</div>);
         else if (isTempLow) statusMessages.push(<div key="tl" className="text-amber-400 flex items-center gap-2"><span>☀️</span> Sıcaklık Düşük. Doğal Isınma Bekleniyor.</div>);
@@ -293,54 +294,31 @@
       }
 
       return (
-        <div className="glass-panel rounded-[24px] p-6 border border-white/10 shadow-xl relative overflow-hidden flex flex-col h-full">
+        <div className="glass-panel rounded-[24px] p-5 border border-white/10 shadow-xl relative overflow-hidden flex flex-col h-full">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-emerald-500"></div>
-          <h2 className="text-2xl font-black text-white mb-6 tracking-tight flex items-center gap-2"><span>📍</span> {title}</h2>
-          <div className="grid grid-cols-3 gap-3 mb-6">
+          <h2 className="text-xl font-black text-white mb-4 tracking-tight flex items-center gap-2"><span>📍</span> {title}</h2>
+          <div className="grid grid-cols-3 gap-2 mb-4">
             <MetricCard title="Sıcaklık" value={temp} unit="°C" emoji="🌡️" isDanger={isTempHigh} isWarning={isTempLow} />
             <MetricCard title="Hava Nem" value={hum} unit="%" emoji="☁️" isDanger={isHumHigh} isWarning={isHumLow} />
             <MetricCard title="Toprak" value={soil} unit="%" emoji="🪴" isDanger={isSoilDry} isWarning={isSoilWet} />
           </div>
-          <div className="bg-slate-900/60 rounded-xl p-5 mb-5 border border-white/5 text-sm font-medium space-y-3">{statusMessages}</div>
-          <div className="border-t border-white/5 pt-5 mt-auto">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex justify-between">
+          <div className="bg-slate-900/60 rounded-xl p-4 mb-4 border border-white/5 text-xs font-medium space-y-2">{statusMessages}</div>
+          <div className="border-t border-white/5 pt-4 mt-auto">
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 flex justify-between">
               <span>{autoMode ? "🎯 Hedef Ayarları" : "🔧 Manuel Kontroller & Hedefler"}</span>
               {autoMode && <span className="text-indigo-400">Otonom Devrede</span>}
             </h3>
             {!autoMode && (
-              <div className="flex gap-4 mb-5">
+              <div className="flex gap-3 mb-4">
                 <SimpleToggle label="Su Pompası" emoji="🚰" active={pump} disabled={waterLow} onClick={() => onUpdate(`${zoneKey}_pump`, !pump)} activeColorClass="bg-blue-600 text-white" />
                 <SimpleToggle label="Egzoz Fanı" emoji="🌀" active={fan} onClick={() => onUpdate(`${zoneKey}_fan`, !fan)} activeColorClass="bg-cyan-600 text-white" />
               </div>
             )}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2">
                <TargetAdjuster label="Hedef Isı" value={targetTemp} unit="°C" onDecrease={() => onUpdate(`${zoneKey}_targetTemp`, Math.max(15, targetTemp - 1))} onIncrease={() => onUpdate(`${zoneKey}_targetTemp`, Math.min(40, targetTemp + 1))} />
                <TargetAdjuster label="Hedef Nem" value={targetHum} unit="%" onDecrease={() => onUpdate(`${zoneKey}_targetHum`, Math.max(30, targetHum - 5))} onIncrease={() => onUpdate(`${zoneKey}_targetHum`, Math.min(90, targetHum + 5))} />
                <TargetAdjuster label="İdeal Toprak" value={targetSoil} unit="%" onDecrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.max(20, targetSoil - 5))} onIncrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.min(90, targetSoil + 5))} />
             </div>
-
-            {/* YENİ: ZAMANLANMIŞ SULAMA EKLENTİSİ */}
-            <div className="mt-4 flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-white/5">
-              <div className="flex items-center gap-3">
-                <div className="text-2xl drop-shadow-[0_0_10px_rgba(79,70,229,0.5)]">⏰</div>
-                <div>
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Zamanlı Sulama</div>
-                  <input 
-                    type="time" 
-                    value={scheduledTime || "12:00"} 
-                    onChange={(e) => onUpdate(`${zoneKey}_scheduledTime`, e.target.value)}
-                    className="bg-slate-800 text-white text-xs font-bold px-2 py-1 rounded border border-white/10 outline-none focus:border-indigo-500 [color-scheme:dark]"
-                  />
-                </div>
-              </div>
-              <button 
-                onClick={() => onUpdate(`${zoneKey}_scheduleActive`, !scheduleActive)}
-                className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${scheduleActive ? 'bg-indigo-600 border-indigo-500 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-slate-800 border-white/10 text-slate-400 hover:bg-slate-700'}`}
-              >
-                {scheduleActive ? 'AKTİF' : 'KAPALI'}
-              </button>
-            </div>
-
           </div>
         </div>
       );
@@ -353,7 +331,7 @@
       const [loggedIn, setLoggedIn] = useState(false);
       const [errorMsg, setErrorMsg] = useState("");
 
-      const defaultZone = { temp: 24, hum: 45, soil: 60, pump: false, fan: false, targetTemp: 26, targetHum: 50, targetSoil: 60, scheduledTime: "12:00", scheduleActive: false };
+      const defaultZone = { temp: 24, hum: 45, soil: 60, pump: false, fan: false, targetTemp: 26, targetHum: 50, targetSoil: 60 };
       const [sera, setSera] = useState({ auto: false, waterLevel: 80, left: { ...defaultZone }, right: { ...defaultZone } });
 
       const seraRef = useRef(sera);
@@ -382,7 +360,7 @@
                 if (d[key] !== undefined) return d[key];
                 if (d.fields && d.fields[key]) {
                   let f = d.fields[key];
-                  return f.integerValue !== undefined ? Number(f.integerValue) : f.doubleValue !== undefined ? Number(f.doubleValue) : f.booleanValue !== undefined ? f.booleanValue : f.stringValue !== undefined ? f.stringValue : fallback;
+                  return f.integerValue !== undefined ? Number(f.integerValue) : f.doubleValue !== undefined ? Number(f.doubleValue) : f.booleanValue !== undefined ? f.booleanValue : fallback;
                 }
                 return fallback;
               };
@@ -394,8 +372,7 @@
                 return {
                   temp: t, hum: h, soil: s,
                   pump: gv(`${prefix}_pump`, false), fan: gv(`${prefix}_fan`, false),
-                  targetTemp: gv(`${prefix}_targetTemp`, 26), targetHum: gv(`${prefix}_targetHum`, 50), targetSoil: gv(`${prefix}_targetSoil`, 60),
-                  scheduledTime: gv(`${prefix}_scheduledTime`, "12:00"), scheduleActive: gv(`${prefix}_scheduleActive`, false)
+                  targetTemp: gv(`${prefix}_targetTemp`, 26), targetHum: gv(`${prefix}_targetHum`, 50), targetSoil: gv(`${prefix}_targetSoil`, 60)
                 };
               };
               setSera({ auto: gv("auto", false), waterLevel: gv("waterLevel", 80), left: parseZone("left"), right: parseZone("right") });
@@ -426,23 +403,15 @@
           if (newWaterLevel > 0 && Math.random() > 0.8 && !waterLow) newWaterLevel -= 1;
           if (newWaterLevel !== current.waterLevel) changedData.waterLevel = newWaterLevel;
 
-          const now = new Date();
-          const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
           ['left', 'right'].forEach(zKey => {
             const z = current[zKey];
-            let { temp: t, hum: h, soil: s, pump, fan, targetTemp, targetHum, targetSoil, scheduledTime, scheduleActive } = z;
+            let { temp: t, hum: h, soil: s, pump, fan, targetTemp, targetHum, targetSoil } = z;
 
             if (current.auto) {
               if (t > targetTemp || h > targetHum) fan = true;
               else if (t <= targetTemp && h <= targetHum) fan = false;
               if (s < targetSoil || h < targetHum) pump = true;
               else if (s >= targetSoil && h >= targetHum) pump = false;
-            }
-
-            // Zamanlanmış Sulama (Saati geldiğinde pompayı zorla açar)
-            if (scheduleActive && scheduledTime === currentHHMM) {
-               pump = true;
             }
 
             if (waterLow && pump) pump = false;
@@ -516,47 +485,47 @@
       return (
         <div className="min-h-screen pb-12">
           <header className="px-6 py-5 glass-panel sticky top-0 z-50 flex items-center justify-between shadow-lg">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-emerald-600 flex items-center justify-center text-2xl shadow-lg">🌱</div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-lg shadow-lg">🌱</div>
               <div>
-                <div className="text-xl font-black tracking-tight text-white">AKILLI SERA</div>
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> MUCİT AKADEMİSİ</div>
+                <div className="text-lg font-black tracking-tight text-white">AKILLI SERA</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> MUCİT AKADEMİSİ</div>
               </div>
             </div>
-            <button onClick={() => { setLoggedIn(false); setPin(""); }} className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-bold btn-touch hover:bg-white/10">ÇIKIŞ</button>
+            <button onClick={() => { setLoggedIn(false); setPin(""); }} className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-xs font-bold btn-touch hover:bg-white/10">ÇIKIŞ</button>
           </header>
 
-          <main className="max-w-6xl mx-auto px-4 py-8 animate-[fadeIn_0.3s_ease-out]">
+          <main className="max-w-5xl mx-auto px-4 py-6 animate-[fadeIn_0.3s_ease-out]">
             
             <GreenhouseVisualizer left={sera.left} right={sera.right} />
 
-            <div className="max-w-xl mx-auto mb-8 space-y-4">
-              <div className={`glass-panel rounded-2xl p-5 flex flex-col gap-3 ${waterLow ? 'danger-pulse' : 'border border-white/5'}`}>
-                <div className="flex justify-between items-center text-sm font-bold uppercase tracking-widest">
+            <div className="max-w-md mx-auto mb-6 space-y-3">
+              <div className={`glass-panel rounded-2xl p-4 flex flex-col gap-2 ${waterLow ? 'danger-pulse' : 'border border-white/5'}`}>
+                <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest">
                   <span className="text-blue-300 flex items-center gap-2">🌊 Ana Su Deposu</span>
                   <span className={waterLow ? 'text-red-400' : 'text-white'}>%{Math.round(sera.waterLevel)}</span>
                 </div>
-                <div className="w-full bg-slate-900 rounded-full h-4 overflow-hidden border border-white/5">
+                <div className="w-full bg-slate-900 rounded-full h-3 overflow-hidden border border-white/5">
                   <div className={`h-full transition-all duration-1000 ${waterLow ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${sera.waterLevel}%` }}></div>
                 </div>
-                {waterLow && <div className="text-xs text-red-400 font-bold mt-1 text-center bg-red-500/10 p-3 rounded-lg">⚠️ KRİTİK SEVİYE! POMPALAR DURDURULDU. (10 Sn İçinde Otomatik Dolum)</div>}
+                {waterLow && <div className="text-[10px] text-red-400 font-bold mt-1 text-center bg-red-500/10 p-2 rounded-lg">⚠️ KRİTİK SEVİYE! POMPALAR DURDURULDU. (10 Sn İçinde Otomatik Dolum)</div>}
               </div>
 
-              <button onClick={() => updateSeraFlat("auto", !sera.auto)} className={`w-full rounded-2xl p-5 flex items-center justify-between border btn-touch transition-all shadow-lg ${sera.auto ? "bg-gradient-to-r from-indigo-600 to-purple-600 border-indigo-400/50" : "bg-slate-800/80 border-white/10 text-slate-300"}`}>
-                <div className="flex items-center gap-4">
-                  <div className="text-4xl">🤖</div>
+              <button onClick={() => updateSeraFlat("auto", !sera.auto)} className={`w-full rounded-2xl p-4 flex items-center justify-between border btn-touch transition-all shadow-lg ${sera.auto ? "bg-gradient-to-r from-indigo-600 to-purple-600 border-indigo-400/50" : "bg-slate-800/80 border-white/10 text-slate-300"}`}>
+                <div className="flex items-center gap-3">
+                  <div className="text-3xl">🤖</div>
                   <div className="text-left">
-                    <div className="text-lg font-black uppercase tracking-wider text-white">Otonom Sistem</div>
-                    <div className="text-xs text-white/70">{sera.auto ? "Yapay Zeka Devrede" : "Sistem Manuel Kontrolde"}</div>
+                    <div className="text-sm font-black uppercase tracking-wider text-white">Otonom Sistem</div>
+                    <div className="text-[10px] text-white/70">{sera.auto ? "Yapay Zeka Devrede" : "Sistem Manuel Kontrolde"}</div>
                   </div>
                 </div>
-                <div className={`w-16 h-8 rounded-full p-1.5 transition-all ${sera.auto ? "bg-white/30" : "bg-slate-900"}`}>
-                  <div className={`w-5 h-5 bg-white rounded-full transition-all ${sera.auto ? "translate-x-8" : "translate-x-0"}`}></div>
+                <div className={`w-12 h-6 rounded-full p-1 transition-all ${sera.auto ? "bg-white/30" : "bg-slate-900"}`}>
+                  <div className={`w-4 h-4 bg-white rounded-full transition-all ${sera.auto ? "translate-x-6" : "translate-x-0"}`}></div>
                 </div>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
               <ZoneCard zoneKey="left" title="Sol Bölge Detayları" data={sera.left} onUpdate={updateSeraFlat} autoMode={sera.auto} waterLow={waterLow} />
               <ZoneCard zoneKey="right" title="Sağ Bölge Detayları" data={sera.right} onUpdate={updateSeraFlat} autoMode={sera.auto} waterLow={waterLow} />
             </div>
