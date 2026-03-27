@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Mucit Akademisi | Akıllı Ev</title>
+  <title>Mucit Akademisi | Akıllı Sera</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -25,22 +25,15 @@
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
     }
-    .btn-touch {
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      cursor: pointer;
+    .btn-touch { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+    .btn-touch:active:not(:disabled) { transform: scale(0.96); }
+    @keyframes pulse-border {
+      0% { border-color: rgba(239, 68, 68, 0.3); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.2); }
+      50% { border-color: rgba(239, 68, 68, 0.8); box-shadow: 0 0 10px 0 rgba(239, 68, 68, 0.4); }
+      100% { border-color: rgba(239, 68, 68, 0.3); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
-    .btn-touch:active:not(:disabled) {
-      transform: scale(0.96);
-    }
-    .loader {
-      width: 20px;
-      height: 20px;
-      border: 3px solid rgba(255, 255, 255, 0.3);
-      border-bottom-color: #fff;
-      border-radius: 50%;
-      display: inline-block;
-      animation: spin 1s linear infinite;
-    }
+    .danger-pulse { animation: pulse-border 2s infinite; }
+    .loader { width: 20px; height: 20px; border: 3px solid rgba(255, 255, 255, 0.3); border-bottom-color: #fff; border-radius: 50%; display: inline-block; animation: spin 1s linear infinite; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
   </style>
 
@@ -71,12 +64,13 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useEffect, useState } = React;
+    const { useEffect, useState, useRef } = React;
 
     function MetricCard({ title, value, unit, emoji, isDanger, isWarning }) {
       let colorClass = "border-white/5 bg-slate-800/50";
       if (isDanger) colorClass = "border-red-500/50 bg-red-500/10 text-red-100";
       else if (isWarning) colorClass = "border-amber-500/50 bg-amber-500/10 text-amber-100";
+      else colorClass = "border-emerald-500/30 bg-emerald-500/10 text-emerald-50";
 
       return (
         <div className={`rounded-xl p-3 flex flex-col items-center justify-center border transition-colors ${colorClass}`}>
@@ -87,53 +81,144 @@
       );
     }
 
-    function ModernWidget({ title, subtitle, icon, active, onClick, colorClass }) {
+    function TargetAdjuster({ label, value, unit, onDecrease, onIncrease }) {
       return (
-        <button onClick={onClick} className={`relative overflow-hidden p-4 rounded-[20px] border text-left btn-touch transition-all duration-300 ${active ? colorClass : 'bg-slate-800/50 border-white/5 text-slate-400'}`}>
-          <div className="flex justify-between items-start mb-4">
-             <div className={`text-3xl transition-transform duration-300 ${active ? 'scale-110' : 'grayscale opacity-50'}`}>{icon}</div>
-             <div className={`w-10 h-6 rounded-full p-1 transition-all ${active ? 'bg-white/30' : 'bg-slate-700'}`}>
-                <div className={`w-4 h-4 bg-white rounded-full transition-all shadow-sm ${active ? 'translate-x-4' : 'translate-x-0'}`}></div>
-             </div>
+        <div className="flex flex-col items-center bg-slate-900/50 p-2 rounded-xl border border-white/5">
+          <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-2">{label}</div>
+          <div className="flex items-center justify-between w-full gap-2">
+            <button onClick={onDecrease} className="w-7 h-7 flex items-center justify-center bg-slate-700 rounded-lg text-sm font-bold btn-touch hover:bg-slate-600">-</button>
+            <span className="text-sm font-black">{value}{unit}</span>
+            <button onClick={onIncrease} className="w-7 h-7 flex items-center justify-center bg-slate-700 rounded-lg text-sm font-bold btn-touch hover:bg-slate-600">+</button>
           </div>
-          <div className={`font-bold text-sm tracking-wide ${active ? 'text-white' : 'text-slate-300'}`}>{title}</div>
-          <div className="text-[9px] uppercase tracking-widest opacity-70 mt-1">{subtitle}</div>
+        </div>
+      );
+    }
+
+    function SimpleToggle({ active, onClick, disabled, label, emoji, activeColorClass }) {
+      return (
+        <button onClick={onClick} disabled={disabled} className={`flex-1 p-3 rounded-xl border flex flex-col items-center gap-2 btn-touch ${disabled ? 'opacity-40 cursor-not-allowed' : ''} ${active ? `${activeColorClass} border-transparent` : "bg-slate-800 border-white/5 text-slate-400"}`}>
+          <span className="text-2xl">{emoji}</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white">{label}</span>
         </button>
       );
     }
 
-    function HomeVisualizer({ data }) {
+    function GreenhouseVisualizer({ left, right }) {
+      const ZoneVisual = ({ title, data }) => {
+        const isHot = data.temp > data.targetTemp;
+        const isCold = data.temp < data.targetTemp;
+        const isDry = data.soil < data.targetSoil;
+
+        let airBg = "bg-emerald-500/5 shadow-[inset_0_0_20px_rgba(16,185,129,0.05)]";
+        if (isHot) airBg = "bg-red-500/20 shadow-[inset_0_0_30px_rgba(239,68,68,0.2)]";
+        else if (isCold) airBg = "bg-sky-500/15 shadow-[inset_0_0_30px_rgba(56,189,248,0.2)]";
+
+        let soilBg = "bg-emerald-900/30";
+        if (isDry) soilBg = "bg-amber-900/50";
+        else if (data.pump) soilBg = "bg-blue-900/50"; 
+
+        return (
+          <div className="flex-1 relative flex flex-col h-full rounded-[18px] overflow-hidden border border-white/10 transition-all duration-700">
+            <div className={`flex-1 flex flex-col items-center justify-center relative transition-colors duration-700 ${airBg}`}>
+              <div className="absolute top-2 left-2 text-[9px] font-black text-white/50">{title}</div>
+              <div className="absolute top-2 right-2 flex gap-1">
+                <div className={`w-1.5 h-1.5 rounded-full transition-all ${isHot ? 'bg-red-500 shadow-[0_0_8px_#ef4444]' : isCold ? 'bg-sky-500 shadow-[0_0_8px_#0ea5e9]' : 'bg-slate-700'}`}></div>
+                <div className={`w-1.5 h-1.5 rounded-full transition-all ${isDry ? 'bg-amber-500 shadow-[0_0_8px_#f59e0b]' : 'bg-slate-700'}`}></div>
+                <div className={`w-1.5 h-1.5 rounded-full transition-all ${data.pump ? 'bg-blue-500 shadow-[0_0_8px_#3b82f6]' : 'bg-slate-700'}`}></div>
+                <div className={`w-1.5 h-1.5 rounded-full transition-all ${data.fan ? 'bg-cyan-500 shadow-[0_0_8px_#06b6d4]' : 'bg-slate-700'}`}></div>
+              </div>
+              <div className={`text-4xl opacity-90 transition-transform duration-500 ${data.fan ? 'animate-spin text-cyan-400' : ''}`}>
+                {data.fan ? '🌀' : isHot ? '🔥' : isCold ? '☀️' : '✅'}
+              </div>
+              <div className="text-[8px] font-bold mt-2 opacity-70 tracking-widest uppercase text-center">
+                {data.fan ? 'Soğutuluyor' : isHot ? 'Sıcak' : isCold ? 'Doğal Isınma' : 'İdeal Hava'}
+              </div>
+            </div>
+            <div className={`h-1/3 relative flex flex-col items-center justify-center border-t border-white/10 transition-colors duration-700 ${soilBg}`}>
+              <div className={`absolute -top-4 text-xl transition-all duration-300 ${data.pump ? 'text-blue-400 animate-bounce opacity-100' : 'opacity-0'}`}>💧</div>
+              <div className="text-2xl opacity-90 transition-all">{isDry ? '🏜️' : data.pump ? '🌧️' : '🪴'}</div>
+              <div className="text-[8px] font-bold mt-1 opacity-70 tracking-widest uppercase">{isDry ? 'Toprak Kuru' : data.pump ? 'Sulanıyor/Nem' : 'Toprak Nemli'}</div>
+            </div>
+          </div>
+        );
+      };
+
       return (
         <div className="mb-8 w-full max-w-[380px] mx-auto animate-[fadeIn_0.5s_ease-out]">
           <div className="text-center mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center justify-center gap-2">
-            <span>👁️</span> Dijital Ev İkizi
+            <span>👁️</span> Canlı Sera Görünümü
           </div>
-          <div className="w-full bg-slate-900/90 rounded-[32px] border-4 border-slate-800 p-4 shadow-[0_0_40px_rgba(0,0,0,0.4)] flex flex-col relative overflow-hidden h-[240px]">
-            <div className="w-0 h-0 border-l-[160px] border-r-[160px] border-b-[60px] border-l-transparent border-r-transparent border-b-slate-800 mx-auto relative mb-2"></div>
-            <div className="flex-1 bg-slate-800 rounded-lg flex flex-col border border-white/5 relative">
-              <div className="flex-1 flex border-b border-white/5">
-                <div className={`flex-1 border-r border-white/5 flex items-center justify-center transition-colors duration-500 ${data.light ? 'bg-amber-500/10' : 'bg-transparent'}`}>
-                  <div className={`text-4xl transition-all duration-500 ${data.light ? 'drop-shadow-[0_0_15px_#fbbf24] scale-110' : 'opacity-30 grayscale'}`}>💡</div>
-                </div>
-                <div className={`flex-1 flex items-center justify-center gap-4 transition-colors duration-500 ${data.kitchen ? 'bg-blue-500/10' : 'bg-transparent'}`}>
-                  <div className={`text-3xl transition-all duration-500 ${data.kitchen ? 'drop-shadow-[0_0_15px_#60a5fa] scale-110' : 'opacity-30 grayscale'}`}>🍽️</div>
-                  <div className={`text-3xl transition-all duration-500 relative ${data.coffee ? 'drop-shadow-[0_0_15px_#f97316] scale-110' : 'opacity-30 grayscale'}`}>
-                    ☕{data.coffee && <div className="absolute -top-4 left-2 text-sm animate-bounce">♨️</div>}
-                  </div>
-                </div>
+          <div className="w-full aspect-square bg-slate-900/90 rounded-[32px] border-4 border-slate-800 p-2 shadow-[0_0_40px_rgba(0,0,0,0.4)] flex flex-col relative overflow-hidden">
+             <div className="h-[15%] w-full relative overflow-hidden flex items-end justify-center pb-2">
+               <div className="absolute inset-x-4 top-2 bottom-0 bg-gradient-to-t from-white/5 to-transparent rounded-t-[100px] border border-b-0 border-white/10"></div>
+               <div className="w-16 h-1 bg-yellow-500/40 rounded-full shadow-[0_0_20px_rgba(234,179,8,0.6)] z-10"></div>
+             </div>
+             <div className="flex-1 flex gap-2 pt-2 pb-1 px-1 relative">
+               <ZoneVisual title="SOL BÖLGE" data={left} />
+               <div className="absolute top-2 bottom-1 left-1/2 -translate-x-1/2 w-1.5 bg-slate-800 rounded-full border border-white/5 z-10 shadow-lg"></div>
+               <ZoneVisual title="SAĞ BÖLGE" data={right} />
+             </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ZoneCard({ zoneKey, title, data, onUpdate, autoMode, waterLow }) {
+      const { temp, hum, soil, targetTemp, targetHum, targetSoil, pump, fan } = data;
+
+      const isTempHigh = temp > targetTemp;
+      const isTempLow = temp < targetTemp;
+      const isHumHigh = hum > targetHum;
+      const isHumLow = hum < targetHum;
+      const isSoilDry = soil < targetSoil;
+      const isSoilWet = soil > targetSoil;
+
+      let statusMessages = [];
+      if (autoMode) {
+        if (isTempHigh) statusMessages.push(<div key="t" className="text-cyan-400 flex items-center gap-2"><span className="animate-spin">🌀</span> Sıcaklık Yüksek! Fan Devrede.</div>);
+        else if (isTempLow) statusMessages.push(<div key="tl" className="text-amber-400 flex items-center gap-2"><span>☀️</span> Sıcaklık Düşük. Doğal Isınma Bekleniyor.</div>);
+        if (isHumHigh) statusMessages.push(<div key="h" className="text-cyan-400 flex items-center gap-2"><span className="animate-spin">🌀</span> Nem Yüksek! Tahliye Yapılıyor.</div>);
+        else if (isHumLow) {
+          if (!waterLow) statusMessages.push(<div key="hl" className="text-blue-400 flex items-center gap-2"><span className="animate-bounce">💧</span> Nem Düşük! Pompa (Nemlendirme) Aktif.</div>);
+          else statusMessages.push(<div key="hlw" className="text-red-400 flex items-center gap-2"><span>⚠️</span> Nem Düşük! SU DEPOSU BOŞ!</div>);
+        }
+        if (isSoilDry && !waterLow) statusMessages.push(<div key="s" className="text-blue-400 flex items-center gap-2"><span className="animate-bounce">💧</span> Toprak Kuru! Sulama Yapılıyor.</div>);
+        else if (isSoilDry && waterLow) statusMessages.push(<div key="sw" className="text-red-400 flex items-center gap-2"><span>⚠️</span> Toprak Kuru! Ancak SU DEPOSU BOŞ!</div>);
+        
+        if (!isTempHigh && !isTempLow && !isHumHigh && !isHumLow && !isSoilDry) {
+          statusMessages.push(<div key="ok" className="text-emerald-400 flex items-center gap-2"><span>✅</span> Ortam Değerleri İdeal Seviyede.</div>);
+        }
+      } else {
+        if (pump) statusMessages.push(<div key="mp" className="text-blue-400 flex items-center gap-2">💧 Manuel Sulama/Nemlendirme Aktif...</div>);
+        if (fan) statusMessages.push(<div key="mf" className="text-cyan-400 flex items-center gap-2"><span className="animate-spin">🌀</span> Manuel Fan Aktif...</div>);
+        if (!pump && !fan) statusMessages.push(<div key="mn" className="text-slate-400 flex items-center gap-2">🔧 Sistem Manuel Beklemede.</div>);
+      }
+
+      return (
+        <div className="glass-panel rounded-[24px] p-5 border border-white/10 shadow-xl relative overflow-hidden flex flex-col h-full">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-emerald-500"></div>
+          <h2 className="text-xl font-black text-white mb-4 tracking-tight flex items-center gap-2"><span>📍</span> {title}</h2>
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <MetricCard title="Sıcaklık" value={temp} unit="°C" emoji="🌡️" isDanger={isTempHigh} isWarning={isTempLow} />
+            <MetricCard title="Hava Nem" value={hum} unit="%" emoji="☁️" isDanger={isHumHigh} isWarning={isHumLow} />
+            <MetricCard title="Toprak" value={soil} unit="%" emoji="🪴" isDanger={isSoilDry} isWarning={isSoilWet} />
+          </div>
+          <div className="bg-slate-900/60 rounded-xl p-4 mb-4 border border-white/5 text-xs font-medium space-y-2">{statusMessages}</div>
+          <div className="border-t border-white/5 pt-4 mt-auto">
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 flex justify-between">
+              <span>{autoMode ? "🎯 Hedef Ayarları" : "🔧 Manuel Kontroller & Hedefler"}</span>
+              {autoMode && <span className="text-indigo-400">Otonom Devrede</span>}
+            </h3>
+            {!autoMode && (
+              <div className="flex gap-3 mb-4">
+                <SimpleToggle label="Su Pompası" emoji="🚰" active={pump} disabled={waterLow} onClick={() => onUpdate(`${zoneKey}_pump`, !pump)} activeColorClass="bg-blue-600 text-white" />
+                <SimpleToggle label="Egzoz Fanı" emoji="🌀" active={fan} onClick={() => onUpdate(`${zoneKey}_fan`, !fan)} activeColorClass="bg-cyan-600 text-white" />
               </div>
-              <div className="flex-1 flex">
-                 <div className={`flex-1 flex items-center justify-center gap-4 border-r border-white/5 transition-colors duration-500 ${data.heater && data.fan ? 'bg-purple-500/10' : data.heater ? 'bg-red-500/10' : data.fan ? 'bg-cyan-500/10' : 'bg-transparent'}`}>
-                    <div className={`text-3xl transition-all duration-500 ${data.heater ? 'drop-shadow-[0_0_15px_#ef4444] scale-110 animate-pulse' : 'opacity-30 grayscale'}`}>🔥</div>
-                    <div className={`text-3xl transition-all duration-500 ${data.fan ? 'drop-shadow-[0_0_15px_#06b6d4] animate-spin' : 'opacity-30 grayscale'}`}>🌀</div>
-                 </div>
-                 <div className={`flex-1 flex items-center justify-center transition-colors duration-500 ${data.plug ? 'bg-emerald-500/10' : 'bg-transparent'}`}>
-                    <div className="flex flex-col items-center gap-1">
-                      <div className={`text-4xl transition-all duration-500 ${data.plug ? 'drop-shadow-[0_0_15px_#10b981] scale-110' : 'opacity-30 grayscale'}`}>📺</div>
-                      <div className={`text-[10px] transition-all duration-500 font-bold ${data.plug ? 'text-emerald-400' : 'text-slate-600 opacity-30'}`}>🔌 Aktif</div>
-                    </div>
-                 </div>
-              </div>
+            )}
+            <div className="grid grid-cols-3 gap-2">
+               <TargetAdjuster label="Hedef Isı" value={targetTemp} unit="°C" onDecrease={() => onUpdate(`${zoneKey}_targetTemp`, Math.max(15, targetTemp - 1))} onIncrease={() => onUpdate(`${zoneKey}_targetTemp`, Math.min(40, targetTemp + 1))} />
+               <TargetAdjuster label="Hedef Nem" value={targetHum} unit="%" onDecrease={() => onUpdate(`${zoneKey}_targetHum`, Math.max(30, targetHum - 5))} onIncrease={() => onUpdate(`${zoneKey}_targetHum`, Math.min(90, targetHum + 5))} />
+               <TargetAdjuster label="İdeal Toprak" value={targetSoil} unit="%" onDecrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.max(20, targetSoil - 5))} onIncrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.min(90, targetSoil + 5))} />
             </div>
           </div>
         </div>
@@ -147,8 +232,12 @@
       const [loggedIn, setLoggedIn] = useState(false);
       const [errorMsg, setErrorMsg] = useState("");
 
-      const [homeData, setHomeData] = useState({ light: false, kitchen: false, coffee: false, heater: false, fan: false, plug: false });
-      const [homeSim, setHomeSim] = useState({ power: 120, temp: 23.5 }); 
+      const defaultZone = { temp: 24, hum: 45, soil: 60, pump: false, fan: false, targetTemp: 26, targetHum: 50, targetSoil: 60 };
+      const [sera, setSera] = useState({ auto: false, waterLevel: 80, left: { ...defaultZone }, right: { ...defaultZone } });
+
+      const seraRef = useRef(sera);
+      useEffect(() => { seraRef.current = sera; }, [sera]);
+      const refillTimerRef = useRef(null);
 
       useEffect(() => {
         const t = setInterval(() => { if (window.firebaseReady && window.FB) { setReady(true); clearInterval(t); } }, 100);
@@ -164,56 +253,112 @@
 
       useEffect(() => {
         if (!user) return;
-        const ref = window.FB.doc(window.FB.db, "artifacts", window.APP_ID, "public", "data", "home", "status");
-        const unsubHome = window.FB.onSnapshot(ref, (snap) => { 
+        const ref = window.FB.doc(window.FB.db, "artifacts", window.APP_ID, "public", "data", "greenhouse", "status");
+        const unsubSera = window.FB.onSnapshot(ref, (snap) => {
             if (snap.exists()) {
-               const d = snap.data();
-               const gv = (key) => d.fields ? (d.fields[key]?.booleanValue || false) : (d[key] || false);
-               setHomeData({ light: gv("light"), kitchen: gv("kitchen"), coffee: gv("coffee"), heater: gv("heater"), fan: gv("fan"), plug: gv("plug") });
-            } 
+              const d = snap.data();
+              const gv = (key, fallback) => {
+                if (d[key] !== undefined) return d[key];
+                if (d.fields && d.fields[key]) {
+                  let f = d.fields[key];
+                  return f.integerValue !== undefined ? Number(f.integerValue) : f.doubleValue !== undefined ? Number(f.doubleValue) : f.booleanValue !== undefined ? f.booleanValue : fallback;
+                }
+                return fallback;
+              };
+
+              const parseZone = (prefix) => {
+                let t = gv(`${prefix}_temp`, 24); if (t > 80 || t < -10) t = 24; 
+                let h = gv(`${prefix}_hum`, 45); if (h > 100 || h < 0) h = 45;
+                let s = gv(`${prefix}_soil`, 60); if (s > 100 || s < 0) s = 60;
+                return {
+                  temp: t, hum: h, soil: s,
+                  pump: gv(`${prefix}_pump`, false), fan: gv(`${prefix}_fan`, false),
+                  targetTemp: gv(`${prefix}_targetTemp`, 26), targetHum: gv(`${prefix}_targetHum`, 50), targetSoil: gv(`${prefix}_targetSoil`, 60)
+                };
+              };
+              setSera({ auto: gv("auto", false), waterLevel: gv("waterLevel", 80), left: parseZone("left"), right: parseZone("right") });
+            }
         });
-        return () => unsubHome();
+        return () => unsubSera();
       }, [user]);
 
-      const toggleHome = async (field) => {
+      const updateSeraFlat = async (field, value) => {
         if (!user) return;
-        const ref = window.FB.doc(window.FB.db, "artifacts", window.APP_ID, "public", "data", "home", "status");
-        await window.FB.setDoc(ref, { [field]: !homeData[field] }, { merge: true }).catch(console.error);
+        const ref = window.FB.doc(window.FB.db, "artifacts", window.APP_ID, "public", "data", "greenhouse", "status");
+        await window.FB.setDoc(ref, { [field]: value }, { merge: true }).catch(console.error);
       };
 
       useEffect(() => {
-        if(!user) return;
-        const interval = setInterval(() => {
-           let power = 50; 
-           if(homeData.light) power += 40;
-           if(homeData.kitchen) power += 60;
-           if(homeData.plug) power += 150;
-           if(homeData.heater) power += 1200;
-           if(homeData.coffee) power += 800;
-           if(homeData.fan) power += 80;
-           
-           power += Math.floor(Math.random() * 20);
+        if (!user) return;
+        const simInterval = setInterval(() => {
+          const current = seraRef.current;
+          let changedData = {};
+          const waterLow = current.waterLevel < 15;
+          let newWaterLevel = current.waterLevel;
 
-           setHomeSim(prev => {
-             let temp = prev.temp;
-             if (homeData.heater) temp += 0.4;
-             else if (homeData.fan) temp -= 0.3;
-             else {
-               if (temp > 22.5) temp -= 0.1;
-               else if (temp < 22.0) temp += 0.1;
-             }
-             return { power, temp: Math.round(temp * 10) / 10 };
-           });
-        }, 2000);
-        return () => clearInterval(interval);
-      }, [user, homeData]);
+          if (waterLow) {
+            if (!refillTimerRef.current) refillTimerRef.current = Date.now(); 
+            else if (Date.now() - refillTimerRef.current >= 10000) { newWaterLevel = 100; refillTimerRef.current = null; }
+          } else refillTimerRef.current = null;
+
+          if (newWaterLevel > 0 && Math.random() > 0.8 && !waterLow) newWaterLevel -= 1;
+          if (newWaterLevel !== current.waterLevel) changedData.waterLevel = newWaterLevel;
+
+          ['left', 'right'].forEach(zKey => {
+            const z = current[zKey];
+            let { temp: t, hum: h, soil: s, pump, fan, targetTemp, targetHum, targetSoil } = z;
+
+            if (current.auto) {
+              if (t > targetTemp || h > targetHum) fan = true;
+              else if (t <= targetTemp && h <= targetHum) fan = false;
+              if (s < targetSoil || h < targetHum) pump = true;
+              else if (s >= targetSoil && h >= targetHum) pump = false;
+            }
+
+            if (waterLow && pump) pump = false;
+
+            if (pump) {
+              s += 1.5; h += 2; 
+              if (newWaterLevel > 0) newWaterLevel -= 0.5; 
+            } else if (s > 20 && Math.random() > 0.5) s -= 0.5; 
+
+            if (fan) { t -= 1; h -= 1; } 
+            else {
+              if (t < 35 && Math.random() > 0.6) t += 0.5; 
+              if (h > 30 && Math.random() > 0.7) h -= 0.5; 
+            }
+
+            if (current.auto) {
+               if (Math.abs(t - targetTemp) <= 1 && !fan) t = targetTemp;
+               if (Math.abs(h - targetHum) <= 2 && !fan && !pump) h = targetHum;
+               if (Math.abs(s - targetSoil) <= 2 && !pump) s = targetSoil;
+            }
+
+            t = Math.max(10, Math.min(t, 55)); h = Math.max(10, Math.min(h, 95)); s = Math.max(0, Math.min(s, 100));
+            t = Math.round(t * 10) / 10; h = Math.round(h * 10) / 10; s = Math.round(s * 10) / 10;
+
+            if (t !== z.temp) changedData[`${zKey}_temp`] = t;
+            if (h !== z.hum) changedData[`${zKey}_hum`] = h;
+            if (s !== z.soil) changedData[`${zKey}_soil`] = s;
+            if (pump !== z.pump) changedData[`${zKey}_pump`] = pump;
+            if (fan !== z.fan) changedData[`${zKey}_fan`] = fan;
+          });
+          
+          if (newWaterLevel !== current.waterLevel) changedData.waterLevel = newWaterLevel;
+          if (Object.keys(changedData).length > 0) {
+            const ref = window.FB.doc(window.FB.db, "artifacts", window.APP_ID, "public", "data", "greenhouse", "status");
+            window.FB.setDoc(ref, changedData, { merge: true }).catch(console.error);
+          }
+        }, 3000); 
+        return () => clearInterval(simInterval);
+      }, [user]);
 
       function login() {
-        if (pin === "0000") {
+        if (pin === "1111") {
           setLoggedIn(true);
           setErrorMsg("");
         } else {
-          setErrorMsg("Hatalı PIN! Akıllı Ev şifresi: 0000");
+          setErrorMsg("Hatalı PIN! Akıllı Sera şifresi: 1111");
         }
       }
 
@@ -228,7 +373,7 @@
                 <div className="mb-3 flex justify-center w-full"><img src="mucitlogo.png" alt="Logo" className="h-32 object-contain" /></div>
                 <h1 className="text-center text-4xl font-black tracking-tighter text-slate-900 leading-[1.1]">MUCİT<br/><span className="text-blue-600">AKADEMİSİ</span></h1>
               </div>
-              <input type="password" maxLength="4" value={pin} onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && login()} placeholder="EV PIN KODU (0000)" className="w-full rounded-xl bg-slate-50 border border-slate-200 px-5 py-4 text-center text-xl tracking-[0.2em] text-slate-900 outline-none focus:border-blue-500 mb-4 font-bold" />
+              <input type="password" maxLength="4" value={pin} onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && login()} placeholder="SERA PIN KODU (1111)" className="w-full rounded-xl bg-slate-50 border border-slate-200 px-5 py-4 text-center text-xl tracking-[0.2em] text-slate-900 outline-none focus:border-blue-500 mb-4 font-bold" />
               <button onClick={login} className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white py-4 font-bold uppercase tracking-wider btn-touch shadow-lg shadow-blue-600/20">Giriş Yap</button>
               {errorMsg && <div className="mt-4 p-3 rounded-lg bg-red-50 text-red-500 text-center text-sm font-medium">{errorMsg}</div>}
             </div>
@@ -236,39 +381,53 @@
         );
       }
 
-      const activeHomeDevices = Object.values(homeData).filter(Boolean).length;
+      const waterLow = sera.waterLevel < 15;
 
       return (
         <div className="min-h-screen pb-12">
           <header className="px-6 py-5 glass-panel sticky top-0 z-50 flex items-center justify-between shadow-lg">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-lg shadow-lg">🏠</div>
+              <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-lg shadow-lg">🌱</div>
               <div>
-                <div className="text-lg font-black tracking-tight text-white">AKILLI EV</div>
+                <div className="text-lg font-black tracking-tight text-white">AKILLI SERA</div>
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> MUCİT AKADEMİSİ</div>
               </div>
             </div>
             <button onClick={() => { setLoggedIn(false); setPin(""); }} className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-xs font-bold btn-touch hover:bg-white/10">ÇIKIŞ</button>
           </header>
 
-          <main className="max-w-3xl mx-auto px-4 py-8 animate-[fadeIn_0.3s_ease-out]">
-            <HomeVisualizer data={homeData} />
+          <main className="max-w-5xl mx-auto px-4 py-6 animate-[fadeIn_0.3s_ease-out]">
+            <GreenhouseVisualizer left={sera.left} right={sera.right} />
 
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <MetricCard title="Evin Sıcaklığı" value={homeSim.temp} unit="°C" emoji="🌡️" isDanger={homeSim.temp > 28} isWarning={homeSim.temp < 18} />
-              <MetricCard title="Çalışan Cihaz" value={activeHomeDevices} unit="Adet" emoji="🔌" isDanger={activeHomeDevices >= 5} isWarning={activeHomeDevices >= 3} />
+            <div className="max-w-md mx-auto mb-6 space-y-3">
+              <div className={`glass-panel rounded-2xl p-4 flex flex-col gap-2 ${waterLow ? 'danger-pulse' : 'border border-white/5'}`}>
+                <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest">
+                  <span className="text-blue-300 flex items-center gap-2">🌊 Ana Su Deposu</span>
+                  <span className={waterLow ? 'text-red-400' : 'text-white'}>%{Math.round(sera.waterLevel)}</span>
+                </div>
+                <div className="w-full bg-slate-900 rounded-full h-3 overflow-hidden border border-white/5">
+                  <div className={`h-full transition-all duration-1000 ${waterLow ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${sera.waterLevel}%` }}></div>
+                </div>
+                {waterLow && <div className="text-[10px] text-red-400 font-bold mt-1 text-center bg-red-500/10 p-2 rounded-lg">⚠️ KRİTİK SEVİYE! POMPALAR DURDURULDU. (10 Sn İçinde Otomatik Dolum)</div>}
+              </div>
+
+              <button onClick={() => updateSeraFlat("auto", !sera.auto)} className={`w-full rounded-2xl p-4 flex items-center justify-between border btn-touch transition-all shadow-lg ${sera.auto ? "bg-gradient-to-r from-indigo-600 to-purple-600 border-indigo-400/50" : "bg-slate-800/80 border-white/10 text-slate-300"}`}>
+                <div className="flex items-center gap-3">
+                  <div className="text-3xl">🤖</div>
+                  <div className="text-left">
+                    <div className="text-sm font-black uppercase tracking-wider text-white">Otonom Sistem</div>
+                    <div className="text-[10px] text-white/70">{sera.auto ? "Yapay Zeka Devrede" : "Sistem Manuel Kontrolde"}</div>
+                  </div>
+                </div>
+                <div className={`w-12 h-6 rounded-full p-1 transition-all ${sera.auto ? "bg-white/30" : "bg-slate-900"}`}>
+                  <div className={`w-4 h-4 bg-white rounded-full transition-all ${sera.auto ? "translate-x-6" : "translate-x-0"}`}></div>
+                </div>
+              </button>
             </div>
 
-            <div className="glass-panel p-5 rounded-[24px] border border-white/10 shadow-xl">
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"><span>📱</span> Ev Aletleri Kontrol Merkezi</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <ModernWidget title="Salon Işığı" subtitle="Ana Aydınlatma" icon="💡" active={homeData.light} onClick={() => toggleHome("light")} colorClass="bg-amber-500/20 border-amber-500/50 text-amber-200" />
-                <ModernWidget title="Mutfak Işığı" subtitle="Tezgah Aydınlatması" icon="🍽️" active={homeData.kitchen} onClick={() => toggleHome("kitchen")} colorClass="bg-blue-500/20 border-blue-500/50 text-blue-200" />
-                <ModernWidget title="Kahve Makinesi" subtitle="Mutfak Aletleri" icon="☕" active={homeData.coffee} onClick={() => toggleHome("coffee")} colorClass="bg-orange-500/20 border-orange-500/50 text-orange-200" />
-                <ModernWidget title="Isıtıcı" subtitle="Ortam Isıtma" icon="🔥" active={homeData.heater} onClick={() => toggleHome("heater")} colorClass="bg-red-500/20 border-red-500/50 text-red-200" />
-                <ModernWidget title="Vantilatör" subtitle="Ortam Soğutma" icon="🌀" active={homeData.fan} onClick={() => toggleHome("fan")} colorClass="bg-cyan-500/20 border-cyan-500/50 text-cyan-200" />
-                <ModernWidget title="Akıllı Priz" subtitle="Eğlence / TV" icon="📺" active={homeData.plug} onClick={() => toggleHome("plug")} colorClass="bg-emerald-500/20 border-emerald-500/50 text-emerald-200" />
-              </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+              <ZoneCard zoneKey="left" title="Sol Bölge Detayları" data={sera.left} onUpdate={updateSeraFlat} autoMode={sera.auto} waterLow={waterLow} />
+              <ZoneCard zoneKey="right" title="Sağ Bölge Detayları" data={sera.right} onUpdate={updateSeraFlat} autoMode={sera.auto} waterLow={waterLow} />
             </div>
           </main>
         </div>
