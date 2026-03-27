@@ -110,31 +110,26 @@
 
       const avgTemp = (left.temp + right.temp) / 2;
       const avgHum = (left.hum + right.hum) / 2;
-      const avgSoil = (left.soil + right.soil) / 2; // Toprak ortalaması eklendi
+      const avgSoil = (left.soil + right.soil) / 2; 
 
-      // Termal Kamera Renk Hesaplayıcı
       const getHeatmapColor = (temp, alpha = 1) => {
-        // Sıcaklığı 10C ile 40C arasına sınırla
         const boundedTemp = Math.max(10, Math.min(40, temp));
-        // 10C -> 240 (Mavi), 40C -> 0 (Kırmızı)
         const hue = ((40 - boundedTemp) / 30) * 240;
         return `hsla(${hue}, 100%, 50%, ${alpha})`;
       };
 
-      // 2D Isı Haritası Arka Plan Stili
       const heatmapStyle = {
         background: `
           radial-gradient(circle at 20% 50%, ${getHeatmapColor(left.temp, 0.8)} 0%, transparent 65%),
           radial-gradient(circle at 80% 50%, ${getHeatmapColor(right.temp, 0.8)} 0%, transparent 65%),
           radial-gradient(circle at 50% 50%, ${getHeatmapColor(avgTemp, 0.8)} 0%, transparent 65%)
         `,
-        backgroundColor: getHeatmapColor(avgTemp, 0.3), // Taban rengi
-        filter: 'blur(15px)', // Renkleri birbirine yedirir
-        opacity: showMap ? 0.75 : 0, // Harita modunda görünür
+        backgroundColor: getHeatmapColor(avgTemp, 0.3), 
+        filter: 'blur(15px)', 
+        opacity: showMap ? 0.75 : 0, 
         transition: 'opacity 1s ease-in-out'
       };
 
-      // Birleştirilmiş Ölçüm İstasyonları (SOL, MERKEZ, SAĞ)
       const combinedSensors = [
         { key: 'SOL',    t: left.temp.toFixed(1),       h: left.hum.toFixed(1),       s: left.soil.toFixed(1),       top: '48%', left: '20%' },
         { key: 'MERKEZ', t: avgTemp.toFixed(1),         h: avgHum.toFixed(1),         s: avgSoil.toFixed(1),         top: '48%', left: '50%' },
@@ -154,7 +149,6 @@
         if (isDry) soilBg = "bg-amber-900/50";
         else if (data.pump) soilBg = "bg-blue-900/50"; 
 
-        // Harita modunda arka planlar şeffaflaşır, ısı haritası görünür
         if (isMapActive) {
           airBg = "bg-transparent";
           soilBg = "bg-transparent border-t border-white/5";
@@ -249,12 +243,35 @@
       const isTempLow = temp < targetTemp;
       const isHumHigh = hum > targetHum;
       const isHumLow = hum < targetHum;
-      const isSoilDry = soil < targetSoil;
-      const isSoilWet = soil > targetSoil;
+      const isSoilDry = soil < targetSoil - 1; // Alt sınır kontrolü
+      const isSoilWet = soil > targetSoil + 1; // Üst sınır kontrolü
 
+      // Gerçek zamanlı saat kontrolü ve kalan süre hesabı
       const now = new Date();
-      const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      const isScheduledNow = scheduleActive && scheduledTime === currentHHMM;
+      const currentHH = now.getHours();
+      const currentMM = now.getMinutes();
+      const currentHHMM = `${String(currentHH).padStart(2, '0')}:${String(currentMM).padStart(2, '0')}`;
+      
+      let hrsLeft = 0;
+      let minsLeft = 0;
+      let diffMins = -1;
+
+      if (scheduleActive && scheduledTime) {
+        const [schedHH, schedMM] = scheduledTime.split(':').map(Number);
+        diffMins = (schedHH * 60 + schedMM) - (currentHH * 60 + currentMM);
+        
+        // Eğer saat bugünü geçtiyse yarına planla
+        if (diffMins < 0) {
+            diffMins += 24 * 60;
+        }
+        
+        if (diffMins > 0) {
+            hrsLeft = Math.floor(diffMins / 60);
+            minsLeft = diffMins % 60;
+        }
+      }
+
+      const isScheduledNow = scheduleActive && diffMins === 0;
 
       let statusMessages = [];
 
@@ -271,10 +288,12 @@
           if (!waterLow) statusMessages.push(<div key="hl" className="text-blue-400 flex items-center gap-2"><span className="animate-bounce">💧</span> Nem Düşük! Pompa (Nemlendirme) Aktif.</div>);
           else statusMessages.push(<div key="hlw" className="text-red-400 flex items-center gap-2"><span>⚠️</span> Nem Düşük! SU DEPOSU BOŞ!</div>);
         }
-        if (isSoilDry && !waterLow) statusMessages.push(<div key="s" className="text-blue-400 flex items-center gap-2"><span className="animate-bounce">💧</span> Toprak Kuru! Sulama Yapılıyor.</div>);
+        
+        // Sulama Histerezisi (Hata Payı) ve Üst Sınır Bildirimi
+        if (pump && !isHumLow && !waterLow && !isScheduledNow) statusMessages.push(<div key="s" className="text-blue-400 flex items-center gap-2"><span className="animate-bounce">💧</span> Sulama Yapılıyor (Hedef: %{targetSoil + 1})...</div>);
         else if (isSoilDry && waterLow) statusMessages.push(<div key="sw" className="text-red-400 flex items-center gap-2"><span>⚠️</span> Toprak Kuru! Ancak SU DEPOSU BOŞ!</div>);
         
-        if (!isTempHigh && !isTempLow && !isHumHigh && !isHumLow && !isSoilDry) {
+        if (!isTempHigh && !isTempLow && !isHumHigh && !isHumLow && !isSoilDry && !pump) {
           statusMessages.push(<div key="ok" className="text-emerald-400 flex items-center gap-2"><span>✅</span> Ortam Değerleri İdeal Seviyede.</div>);
         }
       } else {
@@ -307,28 +326,46 @@
             <div className="grid grid-cols-3 gap-3">
                <TargetAdjuster label="Hedef Isı" value={targetTemp} unit="°C" onDecrease={() => onUpdate(`${zoneKey}_targetTemp`, Math.max(15, targetTemp - 1))} onIncrease={() => onUpdate(`${zoneKey}_targetTemp`, Math.min(40, targetTemp + 1))} />
                <TargetAdjuster label="Hedef Nem" value={targetHum} unit="%" onDecrease={() => onUpdate(`${zoneKey}_targetHum`, Math.max(30, targetHum - 5))} onIncrease={() => onUpdate(`${zoneKey}_targetHum`, Math.min(90, targetHum + 5))} />
-               <TargetAdjuster label="İdeal Toprak" value={targetSoil} unit="%" onDecrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.max(20, targetSoil - 5))} onIncrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.min(90, targetSoil + 5))} />
+               <TargetAdjuster label="İdeal Toprak (±%1)" value={`${targetSoil - 1}-${targetSoil + 1}`} unit="%" onDecrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.max(20, targetSoil - 1))} onIncrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.min(90, targetSoil + 1))} />
             </div>
 
-            {/* YENİ: ZAMANLANMIŞ SULAMA EKLENTİSİ */}
-            <div className="mt-4 flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-white/5">
-              <div className="flex items-center gap-3">
-                <div className="text-2xl drop-shadow-[0_0_10px_rgba(79,70,229,0.5)]">⏰</div>
-                <div>
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Zamanlı Sulama</div>
-                  <input 
-                    type="time" 
-                    value={scheduledTime || "12:00"} 
-                    onChange={(e) => onUpdate(`${zoneKey}_scheduledTime`, e.target.value)}
-                    className="bg-slate-800 text-white text-xs font-bold px-2 py-1 rounded border border-white/10 outline-none focus:border-indigo-500 [color-scheme:dark]"
-                  />
+            {/* ZAMANLANMIŞ SULAMA EKLENTİSİ (CANLI GERİ SAYIMLI) */}
+            <div className="mt-4 flex items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-white/5">
+              <div className="flex items-center gap-4">
+                <div className="text-3xl drop-shadow-[0_0_10px_rgba(79,70,229,0.5)]">⏰</div>
+                <div className="flex flex-col gap-1.5">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    Zamanlı Sulama
+                    {scheduleActive && <span className="text-emerald-400 animate-pulse text-[9px] bg-emerald-500/20 px-1.5 rounded">(Aktif)</span>}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input 
+                      type="time" 
+                      value={scheduledTime || "12:00"} 
+                      onChange={(e) => onUpdate(`${zoneKey}_scheduledTime`, e.target.value)}
+                      className="bg-slate-800 text-white text-sm font-black px-2 py-1 rounded-lg border border-white/10 outline-none focus:border-indigo-500 [color-scheme:dark]"
+                    />
+                    
+                    {/* Canlı Geri Sayım veya Devrede Mesajı */}
+                    {scheduleActive && diffMins > 0 && (
+                      <div className="text-[10px] font-bold text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20">
+                        ⏳ {hrsLeft > 0 ? `${hrsLeft} saat ` : ''}{minsLeft} dk kaldı
+                      </div>
+                    )}
+                    {scheduleActive && diffMins === 0 && (
+                      <div className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">
+                        💦 Sulama yapılıyor
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
+              
               <button 
                 onClick={() => onUpdate(`${zoneKey}_scheduleActive`, !scheduleActive)}
-                className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${scheduleActive ? 'bg-indigo-600 border-indigo-500 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-slate-800 border-white/10 text-slate-400 hover:bg-slate-700'}`}
+                className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all border ${scheduleActive ? 'bg-indigo-600 border-indigo-500 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-slate-800 border-white/10 text-slate-400 hover:bg-slate-700'}`}
               >
-                {scheduleActive ? 'AKTİF' : 'KAPALI'}
+                {scheduleActive ? 'KAPAT' : 'AÇ'}
               </button>
             </div>
 
@@ -344,7 +381,8 @@
       const [loggedIn, setLoggedIn] = useState(false);
       const [errorMsg, setErrorMsg] = useState("");
 
-      const defaultZone = { temp: 24, hum: 45, soil: 60, pump: false, fan: false, targetTemp: 26, targetHum: 50, targetSoil: 60, scheduledTime: "12:00", scheduleActive: false };
+      // scheduleActive varsayılan olarak true (Aktif) bırakıldı
+      const defaultZone = { temp: 24, hum: 45, soil: 60, pump: false, fan: false, targetTemp: 26, targetHum: 50, targetSoil: 60, scheduledTime: "12:00", scheduleActive: true };
       const [sera, setSera] = useState({ auto: false, waterLevel: 80, left: { ...defaultZone }, right: { ...defaultZone } });
 
       const seraRef = useRef(sera);
@@ -386,7 +424,7 @@
                   temp: t, hum: h, soil: s,
                   pump: gv(`${prefix}_pump`, false), fan: gv(`${prefix}_fan`, false),
                   targetTemp: gv(`${prefix}_targetTemp`, 26), targetHum: gv(`${prefix}_targetHum`, 50), targetSoil: gv(`${prefix}_targetSoil`, 60),
-                  scheduledTime: gv(`${prefix}_scheduledTime`, "12:00"), scheduleActive: gv(`${prefix}_scheduleActive`, false)
+                  scheduledTime: gv(`${prefix}_scheduledTime`, "12:00"), scheduleActive: gv(`${prefix}_scheduleActive`, true) // Varsayılan aktif
                 };
               };
               setSera({ auto: gv("auto", false), waterLevel: gv("waterLevel", 80), left: parseZone("left"), right: parseZone("right") });
@@ -427,8 +465,10 @@
             if (current.auto) {
               if (t > targetTemp || h > targetHum) fan = true;
               else if (t <= targetTemp && h <= targetHum) fan = false;
-              if (s < targetSoil || h < targetHum) pump = true;
-              else if (s >= targetSoil && h >= targetHum) pump = false;
+              
+              // Histerezis (±%1 Hata Payı) Sulama Mantığı
+              if (s < targetSoil - 1 || h < targetHum) pump = true;
+              else if (s >= targetSoil + 1 && h >= targetHum) pump = false;
             }
 
             // Zamanlanmış Sulama (Saati geldiğinde pompayı zorla açar)
@@ -452,7 +492,8 @@
             if (current.auto) {
                if (Math.abs(t - targetTemp) <= 1 && !fan) t = targetTemp;
                if (Math.abs(h - targetHum) <= 2 && !fan && !pump) h = targetHum;
-               if (Math.abs(s - targetSoil) <= 2 && !pump) s = targetSoil;
+               // NOT: Toprak (s) için yapay kitlemeyi sildik. 
+               // Böylece değer alt sınır ile üst sınır arasında doğal salınım yapacak.
             }
 
             t = Math.max(10, Math.min(t, 55)); h = Math.max(10, Math.min(h, 95)); s = Math.max(0, Math.min(s, 100));
