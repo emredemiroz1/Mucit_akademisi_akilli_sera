@@ -110,6 +110,7 @@
 
       const avgTemp = (left.temp + right.temp) / 2;
       const avgHum = (left.hum + right.hum) / 2;
+      const avgSoil = (left.soil + right.soil) / 2; // Toprak ortalaması eklendi
 
       // Termal Kamera Renk Hesaplayıcı
       const getHeatmapColor = (temp, alpha = 1) => {
@@ -134,22 +135,13 @@
         transition: 'opacity 1s ease-in-out'
       };
 
-      // Havadaki Isı ve Nem (DHT11) Sensörleri
-      const airSensors = [
-        { key: 'KUZEY',  t: (avgTemp + 0.4).toFixed(1), h: (avgHum - 1.2).toFixed(1), top: '25%', left: '50%' },
-        { key: 'GÜNEY',  t: (avgTemp - 0.3).toFixed(1), h: (avgHum + 0.8).toFixed(1), top: '65%', left: '50%' },
-        { key: 'DOĞU',   t: right.temp.toFixed(1),      h: right.hum.toFixed(1),      top: '45%', left: '80%' },
-        { key: 'BATI',   t: left.temp.toFixed(1),       h: left.hum.toFixed(1),       top: '45%', left: '20%' },
-        { key: 'MERKEZ', t: avgTemp.toFixed(1),         h: avgHum.toFixed(1),         top: '45%', left: '50%' }
-      ];
-
-      // Toprak Nem Sensörleri
-      const soilSensors = [
-        { key: 'SOL-1',  s: (left.soil - 1.5).toFixed(1),               top: '80%', left: '25%' },
-        { key: 'SOL-2',  s: (left.soil + 1.2).toFixed(1),               top: '92%', left: '35%' },
-        { key: 'MERKEZ', s: ((left.soil + right.soil) / 2).toFixed(1),  top: '85%', left: '50%' },
-        { key: 'SAĞ-1',  s: (right.soil - 2.1).toFixed(1),              top: '80%', left: '75%' },
-        { key: 'SAĞ-2',  s: (right.soil + 0.8).toFixed(1),              top: '92%', left: '65%' }
+      // Birleştirilmiş Ölçüm İstasyonları (Hava Isı, Hava Nem, Toprak Nem Aynı Yerde)
+      const combinedSensors = [
+        { key: 'KUZEY',  t: (avgTemp + 0.4).toFixed(1), h: (avgHum - 1.2).toFixed(1), s: (avgSoil - 1.5).toFixed(1), top: '20%', left: '50%' },
+        { key: 'GÜNEY',  t: (avgTemp - 0.3).toFixed(1), h: (avgHum + 0.8).toFixed(1), s: (avgSoil + 1.2).toFixed(1), top: '75%', left: '50%' },
+        { key: 'DOĞU',   t: right.temp.toFixed(1),      h: right.hum.toFixed(1),      s: right.soil.toFixed(1),      top: '48%', left: '80%' },
+        { key: 'BATI',   t: left.temp.toFixed(1),       h: left.hum.toFixed(1),       s: left.soil.toFixed(1),       top: '48%', left: '20%' },
+        { key: 'MERKEZ', t: avgTemp.toFixed(1),         h: avgHum.toFixed(1),         s: avgSoil.toFixed(1),         top: '48%', left: '50%' }
       ];
 
       const ZoneVisual = ({ title, data, isMapActive }) => {
@@ -232,25 +224,16 @@
                <div className="absolute top-2 bottom-1 left-1/2 -translate-x-1/2 w-1.5 bg-slate-800 rounded-full border border-white/5 z-10 shadow-lg"></div>
                <ZoneVisual title="SAĞ BÖLGE" data={right} isMapActive={showMap} />
                
-               {/* SENSÖR VERİ ETİKETLERİ (OVERLAY) */}
+               {/* SENSÖR VERİ ETİKETLERİ (BİRLEŞİK İSTASYONLAR) */}
                <div className={`absolute inset-0 z-20 pointer-events-none transition-all duration-500 ${showMap ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
                  
-                 {/* Hava Sensörleri (DHT11) */}
-                 {airSensors.map((sensor) => (
-                    <div key={sensor.key} className="absolute transform -translate-x-1/2 -translate-y-1/2 bg-slate-900/80 backdrop-blur-md border border-cyan-500/40 rounded-lg px-2 py-1 shadow-2xl flex flex-col items-center" style={{ top: sensor.top, left: sensor.left }}>
-                      <div className="text-[7px] text-cyan-400 font-black tracking-widest">{sensor.key}</div>
-                      <div className="text-[10px] font-black text-white whitespace-nowrap">
-                        {sensor.t}°C <span className="opacity-40 font-normal">|</span> %{sensor.h}
-                      </div>
-                    </div>
-                 ))}
-
-                 {/* Toprak Sensörleri */}
-                 {soilSensors.map((sensor) => (
-                    <div key={sensor.key} className="absolute transform -translate-x-1/2 -translate-y-1/2 bg-slate-900/80 backdrop-blur-md border border-red-500/40 rounded-lg px-2 py-1 shadow-2xl flex flex-col items-center" style={{ top: sensor.top, left: sensor.left }}>
-                      <div className="text-[7px] text-red-400 font-black tracking-widest">{sensor.key}</div>
-                      <div className="text-[10px] font-black text-white whitespace-nowrap">
-                        %{sensor.s}
+                 {combinedSensors.map((sensor) => (
+                    <div key={sensor.key} className="absolute transform -translate-x-1/2 -translate-y-1/2 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-lg px-2 py-1.5 shadow-2xl flex flex-col items-center min-w-[90px]" style={{ top: sensor.top, left: sensor.left }}>
+                      <div className="text-[8px] text-amber-400 font-black tracking-widest border-b border-white/10 w-full text-center pb-0.5 mb-1">{sensor.key}</div>
+                      <div className="flex w-full justify-between items-center gap-2 text-[9px] font-black text-white">
+                        <div className="flex flex-col items-center"><span className="text-cyan-400 text-[6px] mb-0.5">ISI</span>{sensor.t}°C</div>
+                        <div className="flex flex-col items-center"><span className="text-blue-400 text-[6px] mb-0.5">H.NEM</span>%{sensor.h}</div>
+                        <div className="flex flex-col items-center"><span className="text-red-400 text-[6px] mb-0.5">TOPRAK</span>%{sensor.s}</div>
                       </div>
                     </div>
                  ))}
