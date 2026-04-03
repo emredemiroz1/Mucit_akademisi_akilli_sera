@@ -104,7 +104,6 @@
       );
     }
 
-    // --- DİJİTAL İKİZ & 2D TERMAL ISI HARİTASI ---
     function GreenhouseVisualizer({ left, right }) {
       const [showMap, setShowMap] = useState(false);
 
@@ -199,25 +198,19 @@
 
           <div className="w-full aspect-[4/3] bg-slate-900/90 rounded-[32px] border-4 border-slate-800 p-3 shadow-[0_0_40px_rgba(0,0,0,0.4)] flex flex-col relative overflow-hidden">
              
-             {/* Sera Çatısı */}
              <div className="h-[15%] w-full relative overflow-hidden flex items-end justify-center pb-3 z-20">
                <div className="absolute inset-x-6 top-3 bottom-0 bg-gradient-to-t from-white/5 to-transparent rounded-t-[100px] border border-b-0 border-white/10"></div>
                <div className="w-20 h-1.5 bg-yellow-500/40 rounded-full shadow-[0_0_20px_rgba(234,179,8,0.6)]"></div>
              </div>
              
-             {/* İç Bölüm */}
              <div className="flex-1 flex gap-3 pt-3 pb-2 px-2 relative">
-               
-               {/* 2D TERMAL ISI HARİTASI (ARKAPLAN) */}
                <div className="absolute inset-0 rounded-2xl z-0" style={heatmapStyle}></div>
 
                <ZoneVisual title="SOL BÖLGE" data={left} isMapActive={showMap} />
                <div className="absolute top-3 bottom-2 left-1/2 -translate-x-1/2 w-2 bg-slate-800 rounded-full border border-white/5 z-10 shadow-lg"></div>
                <ZoneVisual title="SAĞ BÖLGE" data={right} isMapActive={showMap} />
                
-               {/* SENSÖR VERİ ETİKETLERİ (OVERLAY) */}
                <div className={`absolute inset-0 z-20 pointer-events-none transition-all duration-500 ${showMap ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
-                 
                  {combinedSensors.map((sensor) => (
                     <div key={sensor.key} className="absolute transform -translate-x-1/2 -translate-y-1/2 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-xl px-3 py-2 shadow-2xl flex flex-col items-center min-w-[110px]" style={{ top: sensor.top, left: sensor.left }}>
                       <div className="text-[10px] text-amber-400 font-black tracking-widest border-b border-white/10 w-full text-center pb-1 mb-1.5">{sensor.key}</div>
@@ -228,7 +221,6 @@
                       </div>
                     </div>
                  ))}
-                 
                </div>
              </div>
           </div>
@@ -246,7 +238,6 @@
       const isSoilDry = soil < targetSoil - 1; 
       const isSoilWet = soil > targetSoil + 1; 
 
-      // Gerçek zamanlı saat kontrolü ve kalan süre hesabı
       const now = new Date();
       const currentHH = now.getHours();
       const currentMM = now.getMinutes();
@@ -260,10 +251,7 @@
         const [schedHH, schedMM] = scheduledTime.split(':').map(Number);
         diffMins = (schedHH * 60 + schedMM) - (currentHH * 60 + currentMM);
         
-        // Eğer saat bugünü geçtiyse yarına planla
-        if (diffMins < 0) {
-            diffMins += 24 * 60;
-        }
+        if (diffMins < 0) { diffMins += 24 * 60; }
         
         if (diffMins > 0) {
             hrsLeft = Math.floor(diffMins / 60);
@@ -275,7 +263,6 @@
 
       let statusMessages = [];
 
-      // Eğer zamanlanmış sulama o an gerçekleşiyorsa en üste uyarı ekle
       if (isScheduledNow && !waterLow) {
          if (pump) {
             statusMessages.push(<div key="sch" className="text-indigo-400 flex items-center gap-2"><span className="animate-pulse text-xl">⏰</span> Zamanlanmış Sulama Yapılıyor...</div>);
@@ -287,13 +274,13 @@
       if (autoMode) {
         if (isTempHigh) statusMessages.push(<div key="t" className="text-cyan-400 flex items-center gap-2"><span className="animate-spin">🌀</span> Sıcaklık Yüksek! Fan Devrede.</div>);
         else if (isTempLow) statusMessages.push(<div key="tl" className="text-amber-400 flex items-center gap-2"><span>☀️</span> Sıcaklık Düşük. Doğal Isınma Bekleniyor.</div>);
+        
         if (isHumHigh) statusMessages.push(<div key="h" className="text-cyan-400 flex items-center gap-2"><span className="animate-spin">🌀</span> Nem Yüksek! Tahliye Yapılıyor.</div>);
         else if (isHumLow) {
           if (!waterLow) statusMessages.push(<div key="hl" className="text-blue-400 flex items-center gap-2"><span className="animate-bounce">💧</span> Nem Düşük! Pompa (Nemlendirme) Aktif.</div>);
           else statusMessages.push(<div key="hlw" className="text-red-400 flex items-center gap-2"><span>⚠️</span> Nem Düşük! SU DEPOSU BOŞ!</div>);
         }
         
-        // Sulama Histerezisi (Hata Payı) ve Üst Sınır Bildirimi
         if (pump && !isHumLow && !waterLow && !isScheduledNow) statusMessages.push(<div key="s" className="text-blue-400 flex items-center gap-2"><span className="animate-bounce">💧</span> Sulama Yapılıyor (Hedef: %{targetSoil + 1})...</div>);
         else if (isSoilDry && waterLow) statusMessages.push(<div key="sw" className="text-red-400 flex items-center gap-2"><span>⚠️</span> Toprak Kuru! Ancak SU DEPOSU BOŞ!</div>);
         
@@ -333,7 +320,6 @@
                <TargetAdjuster label="İdeal Toprak (±%1)" value={`${targetSoil - 1}-${targetSoil + 1}`} unit="%" onDecrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.max(20, targetSoil - 1))} onIncrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.min(90, targetSoil + 1))} />
             </div>
 
-            {/* ZAMANLANMIŞ SULAMA EKLENTİSİ */}
             <div className="mt-4 flex items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-white/5">
               <div className="flex items-center gap-4">
                 <div className="text-3xl drop-shadow-[0_0_10px_rgba(79,70,229,0.5)]">⏰</div>
@@ -350,7 +336,6 @@
                       className="bg-slate-800 text-white text-sm font-black px-2 py-1 rounded-lg border border-white/10 outline-none focus:border-indigo-500 [color-scheme:dark]"
                     />
                     
-                    {/* Canlı Geri Sayım veya Devrede Mesajı */}
                     {scheduleActive && diffMins > 0 && (
                       <div className="text-[10px] font-bold text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20">
                         ⏳ {hrsLeft > 0 ? `${hrsLeft} saat ` : ''}{minsLeft} dk kaldı
@@ -372,7 +357,6 @@
                 {scheduleActive ? 'KAPAT' : 'AÇ'}
               </button>
             </div>
-
           </div>
         </div>
       );
@@ -385,7 +369,6 @@
       const [loggedIn, setLoggedIn] = useState(false);
       const [errorMsg, setErrorMsg] = useState("");
 
-      // Her bölgenin varsayılan hedefleri ve SULAMA SAATLERİ artık birbirinden tamamen BAĞIMSIZ!
       const [sera, setSera] = useState({ 
         auto: false, 
         waterLevel: 80, 
@@ -395,7 +378,6 @@
 
       const seraRef = useRef(sera);
       useEffect(() => { seraRef.current = sera; }, [sera]);
-      const refillTimerRef = useRef(null);
 
       useEffect(() => {
         const t = setInterval(() => { if (window.firebaseReady && window.FB) { setReady(true); clearInterval(t); } }, 100);
@@ -425,7 +407,6 @@
               };
 
               const parseZone = (prefix) => {
-                // Sol ve Sağ bölge sensör okumaları ve hedefleri birbirine karışmaması için ayrı Fallback'ler tanımlandı.
                 let t = gv(`${prefix}_temp`, prefix === 'left' ? 24 : 22); if (t > 80 || t < -10) t = prefix === 'left' ? 24 : 22; 
                 let h = gv(`${prefix}_hum`, prefix === 'left' ? 45 : 50); if (h > 100 || h < 0) h = prefix === 'left' ? 45 : 50;
                 let s = gv(`${prefix}_soil`, prefix === 'left' ? 60 : 55); if (s > 100 || s < 0) s = prefix === 'left' ? 60 : 55;
@@ -435,7 +416,7 @@
                   targetTemp: gv(`${prefix}_targetTemp`, prefix === 'left' ? 26 : 24), 
                   targetHum: gv(`${prefix}_targetHum`, prefix === 'left' ? 50 : 55), 
                   targetSoil: gv(`${prefix}_targetSoil`, prefix === 'left' ? 60 : 55),
-                  scheduledTime: gv(`${prefix}_scheduledTime`, prefix === 'left' ? "08:30" : "19:00"), // Bağımsız saatler!
+                  scheduledTime: gv(`${prefix}_scheduledTime`, prefix === 'left' ? "08:30" : "19:00"),
                   scheduleActive: gv(`${prefix}_scheduleActive`, true)
                 };
               };
@@ -451,21 +432,13 @@
         await window.FB.setDoc(ref, { [field]: value }, { merge: true }).catch(console.error);
       };
 
+      // CANLI MOD: SADECE OTONOM KARARLARI VERİR, SENSÖR VERİSİNİ SAHTE OLARAK DEĞİŞTİRMEZ (GERÇEK ESP32 BEKLENİR)
       useEffect(() => {
         if (!user) return;
-        const simInterval = setInterval(() => {
+        const controlInterval = setInterval(() => {
           const current = seraRef.current;
           let changedData = {};
           const waterLow = current.waterLevel < 15;
-          let newWaterLevel = current.waterLevel;
-
-          if (waterLow) {
-            if (!refillTimerRef.current) refillTimerRef.current = Date.now(); 
-            else if (Date.now() - refillTimerRef.current >= 10000) { newWaterLevel = 100; refillTimerRef.current = null; }
-          } else refillTimerRef.current = null;
-
-          if (newWaterLevel > 0 && Math.random() > 0.8 && !waterLow) newWaterLevel -= 1;
-          if (newWaterLevel !== current.waterLevel) changedData.waterLevel = newWaterLevel;
 
           const now = new Date();
           const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -473,68 +446,39 @@
           ['left', 'right'].forEach(zKey => {
             const z = current[zKey];
             let { temp: t, hum: h, soil: s, pump, fan, targetTemp, targetHum, targetSoil, scheduledTime, scheduleActive } = z;
+            let initialPump = z.pump;
+            let initialFan = z.fan;
 
-            // 1. Otonom Kontroller (Isı, Hava Nemi ve Histerezisli Toprak Nemi)
+            // 1. Otonom Kontroller
             if (current.auto) {
               if (t > targetTemp || h > targetHum) fan = true;
               else if (t <= targetTemp && h <= targetHum) fan = false;
               
-              // İlgili motor SADECE kendi bölgesi kurursa çalışır
               if (s < targetSoil - 1 || h < targetHum) pump = true;
               else if (s >= targetSoil + 1 && h >= targetHum) pump = false;
             }
 
             // 2. Zamanlanmış Sulama Mantığı
             if (scheduleActive && scheduledTime === currentHHMM) {
-               if (s < targetSoil + 1) {
-                   pump = true; 
-               } else {
-                   pump = false; 
-               }
+               if (s < targetSoil + 1) pump = true; 
+               else pump = false; 
             }
 
-            // 3. Akıllı Güvenlik Kapatması
-            if (!current.auto && s >= targetSoil + 1) {
-               pump = false;
-            }
-
-            // Güvenlik: Ana depoda su bittiyse iki motor da durur
+            // 3. Güvenlik Kapatmaları
+            if (!current.auto && s >= targetSoil + 1) pump = false;
             if (waterLow && pump) pump = false;
 
-            // Simülasyon Değer Güncellemeleri
-            if (pump) {
-              s += 1.5; h += 2; 
-              if (newWaterLevel > 0) newWaterLevel -= 0.5; // Hangi motor çalışırsa çalışsın ana depodan su harcanır
-            } else if (s > 20 && Math.random() > 0.5) s -= 0.5; 
-
-            if (fan) { t -= 1; h -= 1; } 
-            else {
-              if (t < 35 && Math.random() > 0.6) t += 0.5; 
-              if (h > 30 && Math.random() > 0.7) h -= 0.5; 
-            }
-
-            if (current.auto) {
-               if (Math.abs(t - targetTemp) <= 1 && !fan) t = targetTemp;
-               if (Math.abs(h - targetHum) <= 2 && !fan && !pump) h = targetHum;
-            }
-
-            t = Math.max(10, Math.min(t, 55)); h = Math.max(10, Math.min(h, 95)); s = Math.max(0, Math.min(s, 100));
-            t = Math.round(t * 10) / 10; h = Math.round(h * 10) / 10; s = Math.round(s * 10) / 10;
-
-            if (t !== z.temp) changedData[`${zKey}_temp`] = t;
-            if (h !== z.hum) changedData[`${zKey}_hum`] = h;
-            if (s !== z.soil) changedData[`${zKey}_soil`] = s;
-            if (pump !== z.pump) changedData[`${zKey}_pump`] = pump;
-            if (fan !== z.fan) changedData[`${zKey}_fan`] = fan;
+            // Motor durumunda gerçekten değişiklik olduysa Firebase'e yaz
+            if (pump !== initialPump) changedData[`${zKey}_pump`] = pump;
+            if (fan !== initialFan) changedData[`${zKey}_fan`] = fan;
           });
           
-          if (newWaterLevel !== current.waterLevel) changedData.waterLevel = newWaterLevel;
           if (Object.keys(changedData).length > 0) {
             const ref = window.FB.doc(window.FB.db, "artifacts", window.APP_ID, "public", "data", "greenhouse", "status");
             window.FB.setDoc(ref, changedData, { merge: true }).catch(console.error);
           }
         }, 3000); 
-        return () => clearInterval(simInterval);
+        return () => clearInterval(controlInterval);
       }, [user]);
 
       function login() {
@@ -574,7 +518,7 @@
               <div className="w-12 h-12 rounded-xl bg-emerald-600 flex items-center justify-center text-2xl shadow-lg">🌱</div>
               <div>
                 <div className="text-xl font-black tracking-tight text-white">AKILLI SERA</div>
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> MUCİT AKADEMİSİ</div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> CANLI SİSTEM DEVREDE</div>
               </div>
             </div>
             <button onClick={() => { setLoggedIn(false); setPin(""); }} className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-bold btn-touch hover:bg-white/10">ÇIKIŞ</button>
@@ -588,12 +532,13 @@
               <div className={`glass-panel rounded-2xl p-5 flex flex-col gap-3 ${waterLow ? 'danger-pulse' : 'border border-white/5'}`}>
                 <div className="flex justify-between items-center text-sm font-bold uppercase tracking-widest">
                   <span className="text-blue-300 flex items-center gap-2">🌊 Ana Su Deposu</span>
-                  <span className={waterLow ? 'text-red-400' : 'text-white'}>%{Math.round(sera.waterLevel)}</span>
+                  <span className={waterLow ? 'text-red-400' : 'text-emerald-400'}>%{Math.round(sera.waterLevel)}</span>
                 </div>
                 <div className="w-full bg-slate-900 rounded-full h-4 overflow-hidden border border-white/5">
-                  <div className={`h-full transition-all duration-1000 ${waterLow ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${sera.waterLevel}%` }}></div>
+                  <div className={`h-full transition-all duration-1000 ${waterLow ? 'bg-red-500' : (sera.waterLevel < 45 ? 'bg-amber-500' : 'bg-blue-500')}`} style={{ width: `${sera.waterLevel}%` }}></div>
                 </div>
-                {waterLow && <div className="text-xs text-red-400 font-bold mt-1 text-center bg-red-500/10 p-3 rounded-lg">⚠️ KRİTİK SEVİYE! POMPALAR DURDURULDU. (10 Sn İçinde Otomatik Dolum)</div>}
+                {waterLow && <div className="text-xs text-red-400 font-bold mt-1 text-center bg-red-500/10 p-3 rounded-lg">⚠️ KRİTİK SEVİYE! POMPALAR DURDURULDU. LÜTFEN DEPOYU DOLDURUN.</div>}
+                {(!waterLow && sera.waterLevel < 45) && <div className="text-xs text-amber-400 font-bold mt-1 text-center bg-amber-500/10 p-3 rounded-lg">⚠️ UYARI: Su Seviyesi Yarıdan Aşağı Düştü!</div>}
               </div>
 
               <button onClick={() => updateSeraFlat("auto", !sera.auto)} className={`w-full rounded-2xl p-5 flex items-center justify-between border btn-touch transition-all shadow-lg ${sera.auto ? "bg-gradient-to-r from-indigo-600 to-purple-600 border-indigo-400/50" : "bg-slate-800/80 border-white/10 text-slate-300"}`}>
