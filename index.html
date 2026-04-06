@@ -465,7 +465,6 @@
             }
 
             // 3. Güvenlik Kapatmaları
-            if (!current.auto && s >= targetSoil + 1) pump = false;
             if (waterLow && pump) pump = false;
 
             // Motor durumunda gerçekten değişiklik olduysa Firebase'e yaz

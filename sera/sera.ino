@@ -7,8 +7,8 @@
 #include "addons/RTDBHelper.h"
 
 // --- WİFİ VE FİREBASE AYARLARI ---
-#define WIFI_SSID "Esptestwifi"
-#define WIFI_PASSWORD "12345678"
+#define WIFI_SSID "FiberHGW_ZT2K3R_2.4GHz"
+#define WIFI_PASSWORD "cjsgsrDtyc"
 #define API_KEY "AIzaSyAR1cyO7pFPM5RLvO308uAcSyf5HaqAizM"
 #define FIREBASE_PROJECT_ID "akillisera-b71d4"
 #define APP_ID "master-iot-final-v3"
