@@ -369,11 +369,12 @@
       const [loggedIn, setLoggedIn] = useState(false);
       const [errorMsg, setErrorMsg] = useState("");
 
+      // TÜM SAHTE VERİLER SIFIRLANDI: Gerçek donanım veri gönderene kadar ekranda "0" görünecek.
       const [sera, setSera] = useState({ 
         auto: false, 
-        waterLevel: 80, 
-        left: { temp: 24, hum: 45, soil: 60, pump: false, fan: false, targetTemp: 26, targetHum: 50, targetSoil: 60, scheduledTime: "08:30", scheduleActive: true }, 
-        right: { temp: 22, hum: 50, soil: 55, pump: false, fan: false, targetTemp: 24, targetHum: 55, targetSoil: 55, scheduledTime: "19:00", scheduleActive: true } 
+        waterLevel: 0, 
+        left: { temp: 0, hum: 0, soil: 0, pump: false, fan: false, targetTemp: 25, targetHum: 50, targetSoil: 50, scheduledTime: "08:00", scheduleActive: false }, 
+        right: { temp: 0, hum: 0, soil: 0, pump: false, fan: false, targetTemp: 25, targetHum: 50, targetSoil: 50, scheduledTime: "19:00", scheduleActive: false } 
       });
 
       const seraRef = useRef(sera);
@@ -407,20 +408,21 @@
               };
 
               const parseZone = (prefix) => {
-                let t = gv(`${prefix}_temp`, prefix === 'left' ? 24 : 22); if (t > 80 || t < -10) t = prefix === 'left' ? 24 : 22; 
-                let h = gv(`${prefix}_hum`, prefix === 'left' ? 45 : 50); if (h > 100 || h < 0) h = prefix === 'left' ? 45 : 50;
-                let s = gv(`${prefix}_soil`, prefix === 'left' ? 60 : 55); if (s > 100 || s < 0) s = prefix === 'left' ? 60 : 55;
+                // GERÇEK VERİ MODU: Gelen veri neyse sadece onu göster, üst/alt sınır yok. Veri yoksa 0 göster.
+                let t = gv(`${prefix}_temp`, 0); 
+                let h = gv(`${prefix}_hum`, 0); 
+                let s = gv(`${prefix}_soil`, 0); 
                 return {
                   temp: t, hum: h, soil: s,
                   pump: gv(`${prefix}_pump`, false), fan: gv(`${prefix}_fan`, false),
-                  targetTemp: gv(`${prefix}_targetTemp`, prefix === 'left' ? 26 : 24), 
-                  targetHum: gv(`${prefix}_targetHum`, prefix === 'left' ? 50 : 55), 
-                  targetSoil: gv(`${prefix}_targetSoil`, prefix === 'left' ? 60 : 55),
-                  scheduledTime: gv(`${prefix}_scheduledTime`, prefix === 'left' ? "08:30" : "19:00"),
-                  scheduleActive: gv(`${prefix}_scheduleActive`, true)
+                  targetTemp: gv(`${prefix}_targetTemp`, 25), 
+                  targetHum: gv(`${prefix}_targetHum`, 50), 
+                  targetSoil: gv(`${prefix}_targetSoil`, 50),
+                  scheduledTime: gv(`${prefix}_scheduledTime`, "12:00"),
+                  scheduleActive: gv(`${prefix}_scheduleActive`, false)
                 };
               };
-              setSera({ auto: gv("auto", false), waterLevel: gv("waterLevel", 80), left: parseZone("left"), right: parseZone("right") });
+              setSera({ auto: gv("auto", false), waterLevel: gv("waterLevel", 0), left: parseZone("left"), right: parseZone("right") });
             }
         });
         return () => unsubSera();
@@ -432,7 +434,7 @@
         await window.FB.setDoc(ref, { [field]: value }, { merge: true }).catch(console.error);
       };
 
-      // CANLI MOD: SADECE OTONOM KARARLARI VERİR, SENSÖR VERİSİNİ SAHTE OLARAK DEĞİŞTİRMEZ (GERÇEK ESP32 BEKLENİR)
+      // CANLI OTONOM KARAR MOTORU: Otonom mod aktifken sadece motorların açık/kapalı durumunu kontrol eder, SENSÖR verilerine dokunmaz.
       useEffect(() => {
         if (!user) return;
         const controlInterval = setInterval(() => {
@@ -445,6 +447,10 @@
 
           ['left', 'right'].forEach(zKey => {
             const z = current[zKey];
+            
+            // GÜVENLİK DUVARI: Sistem tamamen manuel ise, UI hiçbir şekilde motorlara müdahale etmez (Kapatmaz).
+            if (!current.auto && !z.scheduleActive) return;
+
             let { temp: t, hum: h, soil: s, pump, fan, targetTemp, targetHum, targetSoil, scheduledTime, scheduleActive } = z;
             let initialPump = z.pump;
             let initialFan = z.fan;
@@ -464,7 +470,7 @@
                else pump = false; 
             }
 
-            // 3. Güvenlik Kapatmaları
+            // 3. Güvenlik Kapatmaları (SADECE DEPO BOŞSA MOTORU KORU, MANUEL MODA KARIŞMA)
             if (waterLow && pump) pump = false;
 
             // Motor durumunda gerçekten değişiklik olduysa Firebase'e yaz
