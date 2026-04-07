@@ -215,6 +215,7 @@ void loop() {
     Serial.printf("Ana Depo Su Seviyesi: %.1f %%\n", water_level);
 
     FirebaseJson content;
+    // Bölgesel Ortalamalar
     content.set("fields/left_temp/doubleValue", left_temp);
     content.set("fields/left_hum/doubleValue", left_hum);
     content.set("fields/left_soil/doubleValue", left_soil);
@@ -223,7 +224,28 @@ void loop() {
     content.set("fields/right_soil/doubleValue", right_soil);
     content.set("fields/waterLevel/doubleValue", water_level);
 
-    String updateMask = "left_temp,left_hum,left_soil,right_temp,right_hum,right_soil,waterLevel";
+    // BİREYSEL 5 SENSÖR (TERMAL HARİTA İÇİN)
+    content.set("fields/s1_t/doubleValue", isnan(t1) ? 24.0 : t1);
+    content.set("fields/s1_h/doubleValue", isnan(h1) ? 50.0 : h1);
+    content.set("fields/s1_s/doubleValue", s1);
+
+    content.set("fields/s2_t/doubleValue", isnan(t2) ? 24.0 : t2);
+    content.set("fields/s2_h/doubleValue", isnan(h2) ? 50.0 : h2);
+    content.set("fields/s2_s/doubleValue", s2);
+
+    content.set("fields/s3_t/doubleValue", isnan(t3) ? 24.0 : t3);
+    content.set("fields/s3_h/doubleValue", isnan(h3) ? 50.0 : h3);
+    content.set("fields/s3_s/doubleValue", s3);
+
+    content.set("fields/s4_t/doubleValue", isnan(t4) ? 24.0 : t4);
+    content.set("fields/s4_h/doubleValue", isnan(h4) ? 50.0 : h4);
+    content.set("fields/s4_s/doubleValue", s4);
+
+    content.set("fields/s5_t/doubleValue", isnan(t5) ? 24.0 : t5);
+    content.set("fields/s5_h/doubleValue", isnan(h5) ? 50.0 : h5);
+    content.set("fields/s5_s/doubleValue", s5);
+
+    String updateMask = "left_temp,left_hum,left_soil,right_temp,right_hum,right_soil,waterLevel,s1_t,s1_h,s1_s,s2_t,s2_h,s2_s,s3_t,s3_h,s3_s,s4_t,s4_h,s4_s,s5_t,s5_h,s5_s";
 
     if (Firebase.Firestore.patchDocument(&fbdo, FIREBASE_PROJECT_ID, "", documentPath.c_str(), content.raw(), updateMask.c_str())) {
       Serial.println("Veriler Firebase'e gonderildi.");
