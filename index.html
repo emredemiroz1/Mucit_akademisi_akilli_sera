@@ -104,12 +104,8 @@
       );
     }
 
-    function GreenhouseVisualizer({ left, right }) {
+    function GreenhouseVisualizer({ left, right, nodes = Array(5).fill({t:24, h:50, s:50}) }) {
       const [showMap, setShowMap] = useState(false);
-
-      const avgTemp = (left.temp + right.temp) / 2;
-      const avgHum = (left.hum + right.hum) / 2;
-      const avgSoil = (left.soil + right.soil) / 2; 
 
       const getHeatmapColor = (temp, alpha = 1) => {
         const boundedTemp = Math.max(10, Math.min(40, temp));
@@ -117,11 +113,15 @@
         return `hsla(${hue}, 100%, 50%, ${alpha})`;
       };
 
+      const avgTemp = nodes.reduce((acc, curr) => acc + curr.t, 0) / 5;
+
       const heatmapStyle = {
         background: `
-          radial-gradient(circle at 20% 50%, ${getHeatmapColor(left.temp, 0.8)} 0%, transparent 65%),
-          radial-gradient(circle at 80% 50%, ${getHeatmapColor(right.temp, 0.8)} 0%, transparent 65%),
-          radial-gradient(circle at 50% 50%, ${getHeatmapColor(avgTemp, 0.8)} 0%, transparent 65%)
+          radial-gradient(circle at 20% 25%, ${getHeatmapColor(nodes[0].t, 0.8)} 0%, transparent 40%),
+          radial-gradient(circle at 20% 75%, ${getHeatmapColor(nodes[1].t, 0.8)} 0%, transparent 40%),
+          radial-gradient(circle at 50% 50%, ${getHeatmapColor(nodes[2].t, 0.8)} 0%, transparent 50%),
+          radial-gradient(circle at 80% 25%, ${getHeatmapColor(nodes[3].t, 0.8)} 0%, transparent 40%),
+          radial-gradient(circle at 80% 75%, ${getHeatmapColor(nodes[4].t, 0.8)} 0%, transparent 40%)
         `,
         backgroundColor: getHeatmapColor(avgTemp, 0.3), 
         filter: 'blur(15px)', 
@@ -130,9 +130,11 @@
       };
 
       const combinedSensors = [
-        { key: 'SOL',    t: left.temp.toFixed(1),       h: left.hum.toFixed(1),       s: left.soil.toFixed(1),       top: '48%', left: '20%' },
-        { key: 'MERKEZ', t: avgTemp.toFixed(1),         h: avgHum.toFixed(1),         s: avgSoil.toFixed(1),         top: '48%', left: '50%' },
-        { key: 'SAĞ',    t: right.temp.toFixed(1),      h: right.hum.toFixed(1),      s: right.soil.toFixed(1),      top: '48%', left: '80%' }
+        { key: 'SENSÖR 1', t: nodes[0].t.toFixed(1), h: nodes[0].h.toFixed(1), s: nodes[0].s.toFixed(1), top: '25%', left: '20%' },
+        { key: 'SENSÖR 2', t: nodes[1].t.toFixed(1), h: nodes[1].h.toFixed(1), s: nodes[1].s.toFixed(1), top: '75%', left: '20%' },
+        { key: 'SENSÖR 3', t: nodes[2].t.toFixed(1), h: nodes[2].h.toFixed(1), s: nodes[2].s.toFixed(1), top: '50%', left: '50%' },
+        { key: 'SENSÖR 4', t: nodes[3].t.toFixed(1), h: nodes[3].h.toFixed(1), s: nodes[3].s.toFixed(1), top: '25%', left: '80%' },
+        { key: 'SENSÖR 5', t: nodes[4].t.toFixed(1), h: nodes[4].h.toFixed(1), s: nodes[4].s.toFixed(1), top: '75%', left: '80%' }
       ];
 
       const ZoneVisual = ({ title, data, isMapActive }) => {
@@ -159,7 +161,6 @@
           <div className="flex-1 relative flex flex-col h-full rounded-[24px] overflow-hidden border border-white/10 transition-all duration-700 z-10">
             <div className={`flex-1 flex flex-col items-center justify-center relative transition-colors duration-700 ${airBg}`}>
               <div className="absolute top-3 left-3 text-xs font-black text-white/50">{title}</div>
-              
               <div className={`text-6xl transition-all duration-500 ${data.fan && !isMapActive ? 'animate-spin text-cyan-400' : ''} ${iconOpacityClass}`}>
                 {data.fan ? '🌀' : isHot ? '🔥' : isCold ? '☀️' : '✅'}
               </div>
@@ -317,7 +318,7 @@
             <div className="grid grid-cols-3 gap-3">
                <TargetAdjuster label="Hedef Isı" value={targetTemp} unit="°C" onDecrease={() => onUpdate(`${zoneKey}_targetTemp`, Math.max(15, targetTemp - 1))} onIncrease={() => onUpdate(`${zoneKey}_targetTemp`, Math.min(40, targetTemp + 1))} />
                <TargetAdjuster label="Hedef Nem" value={targetHum} unit="%" onDecrease={() => onUpdate(`${zoneKey}_targetHum`, Math.max(30, targetHum - 5))} onIncrease={() => onUpdate(`${zoneKey}_targetHum`, Math.min(90, targetHum + 5))} />
-               <TargetAdjuster label="İdeal Toprak (±%1)" value={`${targetSoil - 1}-${targetSoil + 1}`} unit="%" onDecrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.max(20, targetSoil - 1))} onIncrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.min(90, targetSoil + 1))} />
+               <TargetAdjuster label="İdeal Toprak" value={`${targetSoil - 1}-${targetSoil + 1}`} unit="%" onDecrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.max(20, targetSoil - 1))} onIncrease={() => onUpdate(`${zoneKey}_targetSoil`, Math.min(90, targetSoil + 1))} />
             </div>
 
             <div className="mt-4 flex items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-white/5">
@@ -369,12 +370,12 @@
       const [loggedIn, setLoggedIn] = useState(false);
       const [errorMsg, setErrorMsg] = useState("");
 
-      // TÜM SAHTE VERİLER SIFIRLANDI: Gerçek donanım veri gönderene kadar ekranda "0" görünecek.
       const [sera, setSera] = useState({ 
         auto: false, 
         waterLevel: 0, 
         left: { temp: 0, hum: 0, soil: 0, pump: false, fan: false, targetTemp: 25, targetHum: 50, targetSoil: 50, scheduledTime: "08:00", scheduleActive: false }, 
-        right: { temp: 0, hum: 0, soil: 0, pump: false, fan: false, targetTemp: 25, targetHum: 50, targetSoil: 50, scheduledTime: "19:00", scheduleActive: false } 
+        right: { temp: 0, hum: 0, soil: 0, pump: false, fan: false, targetTemp: 25, targetHum: 50, targetSoil: 50, scheduledTime: "19:00", scheduleActive: false },
+        nodes: Array(5).fill({t: 0, h: 0, s: 0})
       });
 
       const seraRef = useRef(sera);
@@ -408,13 +409,12 @@
               };
 
               const parseZone = (prefix) => {
-                // GERÇEK VERİ MODU: Gelen veri neyse sadece onu göster, üst/alt sınır yok. Veri yoksa 0 göster.
-                let t = gv(`${prefix}_temp`, 0); 
-                let h = gv(`${prefix}_hum`, 0); 
-                let s = gv(`${prefix}_soil`, 0); 
                 return {
-                  temp: t, hum: h, soil: s,
-                  pump: gv(`${prefix}_pump`, false), fan: gv(`${prefix}_fan`, false),
+                  temp: gv(`${prefix}_temp`, 0), 
+                  hum: gv(`${prefix}_hum`, 0), 
+                  soil: gv(`${prefix}_soil`, 0),
+                  pump: gv(`${prefix}_pump`, false), 
+                  fan: gv(`${prefix}_fan`, false),
                   targetTemp: gv(`${prefix}_targetTemp`, 25), 
                   targetHum: gv(`${prefix}_targetHum`, 50), 
                   targetSoil: gv(`${prefix}_targetSoil`, 50),
@@ -422,7 +422,33 @@
                   scheduleActive: gv(`${prefix}_scheduleActive`, false)
                 };
               };
-              setSera({ auto: gv("auto", false), waterLevel: gv("waterLevel", 0), left: parseZone("left"), right: parseZone("right") });
+
+              const leftZone = parseZone("left");
+              const rightZone = parseZone("right");
+
+              // GÜÇLENDİRİLMİŞ FALLBACK (YEDEKLEME) ALGORİTMASI
+              // Eğer sensörler 0 gönderiyorsa veya henüz karta bağlanmamışsa alt kartlardaki değerleri (Sol/Sağ) gösterir.
+              const parseNodes = () => {
+                const getVal = (key, fallback) => {
+                   let val = gv(key, null);
+                   return (val === null || val === 0) ? fallback : val;
+                };
+                return [
+                  { t: getVal(`s1_t`, leftZone.temp), h: getVal(`s1_h`, leftZone.hum), s: getVal(`s1_s`, leftZone.soil) },
+                  { t: getVal(`s2_t`, leftZone.temp), h: getVal(`s2_h`, leftZone.hum), s: getVal(`s2_s`, leftZone.soil) },
+                  { t: getVal(`s3_t`, (leftZone.temp + rightZone.temp)/2), h: getVal(`s3_h`, (leftZone.hum + rightZone.hum)/2), s: getVal(`s3_s`, (leftZone.soil + rightZone.soil)/2) },
+                  { t: getVal(`s4_t`, rightZone.temp), h: getVal(`s4_h`, rightZone.hum), s: getVal(`s4_s`, rightZone.soil) },
+                  { t: getVal(`s5_t`, rightZone.temp), h: getVal(`s5_h`, rightZone.hum), s: getVal(`s5_s`, rightZone.soil) }
+                ];
+              };
+
+              setSera({ 
+                auto: gv("auto", false), 
+                waterLevel: gv("waterLevel", 0), 
+                left: leftZone, 
+                right: rightZone,
+                nodes: parseNodes()
+              });
             }
         });
         return () => unsubSera();
@@ -434,7 +460,7 @@
         await window.FB.setDoc(ref, { [field]: value }, { merge: true }).catch(console.error);
       };
 
-      // CANLI OTONOM KARAR MOTORU: Otonom mod aktifken sadece motorların açık/kapalı durumunu kontrol eder, SENSÖR verilerine dokunmaz.
+      // CANLI OTONOM KARAR MOTORU
       useEffect(() => {
         if (!user) return;
         const controlInterval = setInterval(() => {
@@ -448,14 +474,12 @@
           ['left', 'right'].forEach(zKey => {
             const z = current[zKey];
             
-            // GÜVENLİK DUVARI: Sistem tamamen manuel ise, UI hiçbir şekilde motorlara müdahale etmez (Kapatmaz).
             if (!current.auto && !z.scheduleActive) return;
 
             let { temp: t, hum: h, soil: s, pump, fan, targetTemp, targetHum, targetSoil, scheduledTime, scheduleActive } = z;
             let initialPump = z.pump;
             let initialFan = z.fan;
 
-            // 1. Otonom Kontroller
             if (current.auto) {
               if (t > targetTemp || h > targetHum) fan = true;
               else if (t <= targetTemp && h <= targetHum) fan = false;
@@ -464,16 +488,13 @@
               else if (s >= targetSoil + 1 && h >= targetHum) pump = false;
             }
 
-            // 2. Zamanlanmış Sulama Mantığı
             if (scheduleActive && scheduledTime === currentHHMM) {
                if (s < targetSoil + 1) pump = true; 
                else pump = false; 
             }
 
-            // 3. Güvenlik Kapatmaları (SADECE DEPO BOŞSA MOTORU KORU, MANUEL MODA KARIŞMA)
             if (waterLow && pump) pump = false;
 
-            // Motor durumunda gerçekten değişiklik olduysa Firebase'e yaz
             if (pump !== initialPump) changedData[`${zKey}_pump`] = pump;
             if (fan !== initialFan) changedData[`${zKey}_fan`] = fan;
           });
@@ -491,7 +512,7 @@
           setLoggedIn(true);
           setErrorMsg("");
         } else {
-          setErrorMsg("Hatalı PIN! Akıllı Sera şifresi: 1111");
+          setErrorMsg("Hatalı PIN! Lütfen tekrar deneyin.");
         }
       }
 
@@ -506,9 +527,9 @@
                 <div className="mb-3 flex justify-center w-full"><img src="mucitlogo.png" alt="Logo" className="h-32 object-contain" /></div>
                 <h1 className="text-center text-4xl font-black tracking-tighter text-slate-900 leading-[1.1]">MUCİT<br/><span className="text-blue-600">AKADEMİSİ</span></h1>
               </div>
-              <input type="password" maxLength="4" value={pin} onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && login()} placeholder="SERA PIN KODU (1111)" className="w-full rounded-xl bg-slate-50 border border-slate-200 px-5 py-4 text-center text-xl tracking-[0.2em] text-slate-900 outline-none focus:border-blue-500 mb-4 font-bold" />
+              <input type="password" maxLength="4" value={pin} onChange={(e) => setPin(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && login()} placeholder="GÜVENLİK KODU" className="w-full rounded-xl bg-slate-50 border border-slate-200 px-5 py-4 text-center text-xl tracking-[0.2em] text-slate-900 outline-none focus:border-blue-500 mb-4 font-bold" />
               <button onClick={login} className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white py-4 font-bold uppercase tracking-wider btn-touch shadow-lg shadow-blue-600/20">Giriş Yap</button>
-              {errorMsg && <div className="mt-4 p-3 rounded-lg bg-red-50 text-red-500 text-center text-sm font-medium">{errorMsg}</div>}
+              {errorMsg && <div className="mt-4 p-3 rounded-lg bg-red-50 text-red-500 text-center text-sm font-bold">{errorMsg}</div>}
             </div>
           </div>
         );
@@ -531,7 +552,7 @@
 
           <main className="max-w-6xl mx-auto px-4 py-8 animate-[fadeIn_0.3s_ease-out]">
             
-            <GreenhouseVisualizer left={sera.left} right={sera.right} />
+            <GreenhouseVisualizer left={sera.left} right={sera.right} nodes={sera.nodes} />
 
             <div className="max-w-xl mx-auto mb-8 space-y-4">
               <div className={`glass-panel rounded-2xl p-5 flex flex-col gap-3 ${waterLow ? 'danger-pulse' : 'border border-white/5'}`}>
