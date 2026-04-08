@@ -27,7 +27,6 @@
     }
     .btn-touch { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
     .btn-touch:active:not(:disabled) { transform: scale(0.96); }
-    
     @keyframes pulse-border {
       0% { border-color: rgba(239, 68, 68, 0.3); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.2); }
       50% { border-color: rgba(239, 68, 68, 0.8); box-shadow: 0 0 10px 0 rgba(239, 68, 68, 0.4); }
@@ -74,22 +73,22 @@
       else colorClass = "border-emerald-500/30 bg-emerald-500/10 text-emerald-50";
 
       return (
-        <div className={`rounded-xl p-4 flex flex-col items-center justify-center border transition-colors ${colorClass}`}>
-          <div className="text-3xl mb-2">{emoji}</div>
-          <div className="text-[11px] font-bold uppercase tracking-widest opacity-70 mb-1">{title}</div>
-          <div className="text-3xl font-black">{value}<span className="text-sm opacity-60 ml-1">{unit}</span></div>
+        <div className={`rounded-xl p-3 flex flex-col items-center justify-center border transition-colors ${colorClass}`}>
+          <div className="text-xl mb-1">{emoji}</div>
+          <div className="text-[9px] font-bold uppercase tracking-widest opacity-70 mb-1">{title}</div>
+          <div className="text-xl font-black">{value}<span className="text-xs opacity-60 ml-1">{unit}</span></div>
         </div>
       );
     }
 
     function TargetAdjuster({ label, value, unit, onDecrease, onIncrease }) {
       return (
-        <div className="flex flex-col items-center bg-slate-900/50 p-3 rounded-xl border border-white/5">
-          <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-3">{label}</div>
+        <div className="flex flex-col items-center bg-slate-900/50 p-2 rounded-xl border border-white/5">
+          <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-2">{label}</div>
           <div className="flex items-center justify-between w-full gap-2">
-            <button onClick={onDecrease} className="w-8 h-8 flex items-center justify-center bg-slate-700 rounded-lg text-lg font-bold btn-touch hover:bg-slate-600">-</button>
-            <span className="text-lg font-black">{value}{unit}</span>
-            <button onClick={onIncrease} className="w-8 h-8 flex items-center justify-center bg-slate-700 rounded-lg text-lg font-bold btn-touch hover:bg-slate-600">+</button>
+            <button onClick={onDecrease} className="w-7 h-7 flex items-center justify-center bg-slate-700 rounded-lg text-sm font-bold btn-touch hover:bg-slate-600">-</button>
+            <span className="text-sm font-black">{value}{unit}</span>
+            <button onClick={onIncrease} className="w-7 h-7 flex items-center justify-center bg-slate-700 rounded-lg text-sm font-bold btn-touch hover:bg-slate-600">+</button>
           </div>
         </div>
       );
@@ -97,14 +96,14 @@
 
     function SimpleToggle({ active, onClick, disabled, label, emoji, activeColorClass }) {
       return (
-        <button onClick={onClick} disabled={disabled} className={`flex-1 p-4 rounded-xl border flex flex-col items-center gap-3 btn-touch ${disabled ? 'opacity-40 cursor-not-allowed' : ''} ${active ? `${activeColorClass} border-transparent` : "bg-slate-800 border-white/5 text-slate-400"}`}>
-          <span className="text-4xl">{emoji}</span>
-          <span className="text-[11px] font-bold uppercase tracking-widest text-white text-center">{label}</span>
+        <button onClick={onClick} disabled={disabled} className={`flex-1 p-4 rounded-xl border flex flex-col items-center gap-2 btn-touch transition-all shadow-md ${disabled ? 'opacity-40 cursor-not-allowed' : ''} ${active ? `${activeColorClass} border-transparent scale-[1.02]` : "bg-slate-800 border-white/5 text-slate-400 hover:bg-slate-700"}`}>
+          <span className={`text-3xl transition-transform ${active && (emoji === '🌀' || emoji === '💨' || emoji === '🍃') ? 'animate-spin' : ''}`}>{emoji}</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white mt-1 text-center">{label}</span>
         </button>
       );
     }
 
-    function GreenhouseVisualizer({ left, right, nodes = Array(5).fill({t:24, h:50, s:50}) }) {
+    function GreenhouseVisualizer({ left, right, intakeFan, exhaustFan, nodes = Array(5).fill({t:24, h:50, s:50}) }) {
       const [showMap, setShowMap] = useState(false);
 
       const getHeatmapColor = (temp, alpha = 1) => {
@@ -161,11 +160,11 @@
           <div className="flex-1 relative flex flex-col h-full rounded-[24px] overflow-hidden border border-white/10 transition-all duration-700 z-10">
             <div className={`flex-1 flex flex-col items-center justify-center relative transition-colors duration-700 ${airBg}`}>
               <div className="absolute top-3 left-3 text-xs font-black text-white/50">{title}</div>
-              <div className={`text-6xl transition-all duration-500 ${data.fan && !isMapActive ? 'animate-spin text-cyan-400' : ''} ${iconOpacityClass}`}>
-                {data.fan ? '🌀' : isHot ? '🔥' : isCold ? '☀️' : '✅'}
+              <div className={`text-6xl transition-all duration-500 ${iconOpacityClass}`}>
+                {isHot ? '🔥' : isCold ? '☀️' : '✅'}
               </div>
               <div className={`text-[10px] font-bold mt-3 tracking-widest uppercase text-center transition-all duration-500 ${iconOpacityClass}`}>
-                {data.fan ? 'Soğutuluyor/Tahliye' : isHot ? 'Sıcak' : isCold ? 'Doğal Isınma' : 'İdeal Hava'}
+                {isHot ? 'Sıcak' : isCold ? 'Doğal Isınma' : 'İdeal Hava'}
               </div>
             </div>
             
@@ -197,8 +196,18 @@
             </button>
           </div>
 
-          <div className="w-full aspect-[4/3] bg-slate-900/90 rounded-[32px] border-4 border-slate-800 p-3 shadow-[0_0_40px_rgba(0,0,0,0.4)] flex flex-col relative overflow-hidden">
+          <div className="w-full aspect-[4/3] bg-slate-900/90 rounded-[32px] border-4 border-slate-800 p-3 shadow-[0_0_40px_rgba(0,0,0,0.4)] flex flex-col relative overflow-visible">
              
+             {/* YENİ: Merkezi Havalandırma Görsel Temsili (Sol Duvar - Taze Hava) */}
+             <div className={`absolute -left-6 top-1/2 -translate-y-1/2 w-10 h-16 bg-slate-800 rounded-lg border-2 border-slate-700 flex items-center justify-center z-30 transition-all ${intakeFan && !showMap ? 'shadow-[0_0_20px_#06b6d4]' : ''}`}>
+                <div className={`text-2xl transition-transform ${intakeFan ? 'animate-spin text-cyan-400' : 'opacity-30 grayscale'}`}>🍃</div>
+             </div>
+
+             {/* YENİ: Merkezi Havalandırma Görsel Temsili (Sağ Duvar - Egzoz) */}
+             <div className={`absolute -right-6 top-1/2 -translate-y-1/2 w-10 h-16 bg-slate-800 rounded-lg border-2 border-slate-700 flex items-center justify-center z-30 transition-all ${exhaustFan && !showMap ? 'shadow-[0_0_20px_#f43f5e]' : ''}`}>
+                <div className={`text-2xl transition-transform ${exhaustFan ? 'animate-spin text-rose-500' : 'opacity-30 grayscale'}`}>💨</div>
+             </div>
+
              <div className="h-[15%] w-full relative overflow-hidden flex items-end justify-center pb-3 z-20">
                <div className="absolute inset-x-6 top-3 bottom-0 bg-gradient-to-t from-white/5 to-transparent rounded-t-[100px] border border-b-0 border-white/10"></div>
                <div className="w-20 h-1.5 bg-yellow-500/40 rounded-full shadow-[0_0_20px_rgba(234,179,8,0.6)]"></div>
@@ -213,12 +222,12 @@
                
                <div className={`absolute inset-0 z-20 pointer-events-none transition-all duration-500 ${showMap ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
                  {combinedSensors.map((sensor) => (
-                    <div key={sensor.key} className="absolute transform -translate-x-1/2 -translate-y-1/2 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-xl px-3 py-2 shadow-2xl flex flex-col items-center min-w-[110px]" style={{ top: sensor.top, left: sensor.left }}>
-                      <div className="text-[10px] text-amber-400 font-black tracking-widest border-b border-white/10 w-full text-center pb-1 mb-1.5">{sensor.key}</div>
-                      <div className="flex w-full justify-between items-center gap-3 text-[11px] font-black text-white">
-                        <div className="flex flex-col items-center"><span className="text-cyan-400 text-[7px] mb-0.5">ISI</span>{sensor.t}°C</div>
-                        <div className="flex flex-col items-center"><span className="text-blue-400 text-[7px] mb-0.5">H.NEM</span>%{sensor.h}</div>
-                        <div className="flex flex-col items-center"><span className="text-red-400 text-[7px] mb-0.5">TOPRAK</span>%{sensor.s}</div>
+                    <div key={sensor.key} className="absolute transform -translate-x-1/2 -translate-y-1/2 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-xl px-2.5 py-2 shadow-2xl flex flex-col items-center min-w-[90px]" style={{ top: sensor.top, left: sensor.left }}>
+                      <div className="text-[9px] text-amber-400 font-black tracking-widest border-b border-white/10 w-full text-center pb-1 mb-1.5">{sensor.key}</div>
+                      <div className="flex w-full justify-between items-center gap-2 text-[10px] font-black text-white">
+                        <div className="flex flex-col items-center"><span className="text-cyan-400 text-[6px] mb-0.5">ISI</span>{sensor.t}°</div>
+                        <div className="flex flex-col items-center"><span className="text-blue-400 text-[6px] mb-0.5">NEM</span>%{sensor.h}</div>
+                        <div className="flex flex-col items-center"><span className="text-red-400 text-[6px] mb-0.5">TOPRAK</span>%{sensor.s}</div>
                       </div>
                     </div>
                  ))}
@@ -229,8 +238,8 @@
       );
     }
 
-    function ZoneCard({ zoneKey, title, data, onUpdate, autoMode, waterLow }) {
-      const { temp, hum, soil, targetTemp, targetHum, targetSoil, pump, fan, scheduledTime, scheduleActive } = data;
+    function ZoneCard({ zoneKey, title, data, onUpdate, autoMode, waterLow, globalIntake, globalExhaust }) {
+      const { temp, hum, soil, targetTemp, targetHum, targetSoil, pump, scheduledTime, scheduleActive } = data;
 
       const isTempHigh = temp > targetTemp;
       const isTempLow = temp < targetTemp;
@@ -251,9 +260,7 @@
       if (scheduleActive && scheduledTime) {
         const [schedHH, schedMM] = scheduledTime.split(':').map(Number);
         diffMins = (schedHH * 60 + schedMM) - (currentHH * 60 + currentMM);
-        
         if (diffMins < 0) { diffMins += 24 * 60; }
-        
         if (diffMins > 0) {
             hrsLeft = Math.floor(diffMins / 60);
             minsLeft = diffMins % 60;
@@ -261,6 +268,7 @@
       }
 
       const isScheduledNow = scheduleActive && diffMins === 0;
+      const anyFanOn = globalIntake || globalExhaust;
 
       let statusMessages = [];
 
@@ -273,11 +281,12 @@
       }
 
       if (autoMode) {
-        if (isTempHigh) statusMessages.push(<div key="t" className="text-cyan-400 flex items-center gap-2"><span className="animate-spin">🌀</span> Sıcaklık Yüksek! Fan Devrede.</div>);
+        // Yeni Havalandırma Mesajları
+        if (isTempHigh || isHumHigh) statusMessages.push(<div key="t" className="text-cyan-400 flex items-center gap-2"><span className="animate-spin">🌬️</span> Sıcaklık/Nem Yüksek! Havalandırma Aktif.</div>);
         else if (isTempLow) statusMessages.push(<div key="tl" className="text-amber-400 flex items-center gap-2"><span>☀️</span> Sıcaklık Düşük. Doğal Isınma Bekleniyor.</div>);
         
-        if (isHumHigh) statusMessages.push(<div key="h" className="text-cyan-400 flex items-center gap-2"><span className="animate-spin">🌀</span> Nem Yüksek! Tahliye Yapılıyor.</div>);
-        else if (isHumLow) {
+        // Nem ve Toprak Mesajları
+        if (isHumLow) {
           if (!waterLow) statusMessages.push(<div key="hl" className="text-blue-400 flex items-center gap-2"><span className="animate-bounce">💧</span> Nem Düşük! Pompa (Nemlendirme) Aktif.</div>);
           else statusMessages.push(<div key="hlw" className="text-red-400 flex items-center gap-2"><span>⚠️</span> Nem Düşük! SU DEPOSU BOŞ!</div>);
         }
@@ -285,13 +294,12 @@
         if (pump && !isHumLow && !waterLow && !isScheduledNow) statusMessages.push(<div key="s" className="text-blue-400 flex items-center gap-2"><span className="animate-bounce">💧</span> Sulama Yapılıyor (Hedef: %{targetSoil + 1})...</div>);
         else if (isSoilDry && waterLow) statusMessages.push(<div key="sw" className="text-red-400 flex items-center gap-2"><span>⚠️</span> Toprak Kuru! Ancak SU DEPOSU BOŞ!</div>);
         
-        if (!isTempHigh && !isTempLow && !isHumHigh && !isHumLow && !isSoilDry && !pump && !isScheduledNow) {
+        if (!isTempHigh && !isTempLow && !isHumHigh && !isHumLow && !isSoilDry && !pump && !isScheduledNow && !anyFanOn) {
           statusMessages.push(<div key="ok" className="text-emerald-400 flex items-center gap-2"><span>✅</span> Ortam Değerleri İdeal Seviyede.</div>);
         }
       } else {
         if (pump && !isScheduledNow) statusMessages.push(<div key="mp" className="text-blue-400 flex items-center gap-2">💧 Manuel Sulama/Nemlendirme Aktif...</div>);
-        if (fan) statusMessages.push(<div key="mf" className="text-cyan-400 flex items-center gap-2"><span className="animate-spin">🌀</span> Manuel Fan Aktif...</div>);
-        if (!pump && !fan && !isScheduledNow) statusMessages.push(<div key="mn" className="text-slate-400 flex items-center gap-2">🔧 Sistem Manuel Beklemede.</div>);
+        if (!pump && !isScheduledNow) statusMessages.push(<div key="mn" className="text-slate-400 flex items-center gap-2">🔧 Su Pompası Manuel Beklemede.</div>);
       }
 
       return (
@@ -306,15 +314,17 @@
           <div className="bg-slate-900/60 rounded-xl p-5 mb-5 border border-white/5 text-sm font-medium space-y-3">{statusMessages}</div>
           <div className="border-t border-white/5 pt-5 mt-auto">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex justify-between">
-              <span>{autoMode ? "🎯 Hedef Ayarları" : "🔧 Manuel Kontroller & Hedefler"}</span>
+              <span>{autoMode ? "🎯 Hedef Ayarları" : "🔧 Manuel Pompa & Hedefler"}</span>
               {autoMode && <span className="text-indigo-400">Otonom Devrede</span>}
             </h3>
+            
+            {/* Fanlar merkezi sisteme taşındığı için burada sadece Pompa butonu kaldı */}
             {!autoMode && (
               <div className="flex gap-4 mb-5">
-                <SimpleToggle label={zoneKey === 'left' ? "Sol Su Motoru" : "Sağ Su Motoru"} emoji="🚰" active={pump} disabled={waterLow} onClick={() => onUpdate(`${zoneKey}_pump`, !pump)} activeColorClass="bg-blue-600 text-white" />
-                <SimpleToggle label={zoneKey === 'left' ? "Sol Fan" : "Sağ Fan"} emoji="🌀" active={fan} onClick={() => onUpdate(`${zoneKey}_fan`, !fan)} activeColorClass="bg-cyan-600 text-white" />
+                <SimpleToggle label={zoneKey === 'left' ? "Sol Su Motorunu Çalıştır" : "Sağ Su Motorunu Çalıştır"} emoji="🚰" active={pump} disabled={waterLow} onClick={() => onUpdate(`${zoneKey}_pump`, !pump)} activeColorClass="bg-blue-600 text-white" />
               </div>
             )}
+
             <div className="grid grid-cols-3 gap-3">
                <TargetAdjuster label="Hedef Isı" value={targetTemp} unit="°C" onDecrease={() => onUpdate(`${zoneKey}_targetTemp`, Math.max(15, targetTemp - 1))} onIncrease={() => onUpdate(`${zoneKey}_targetTemp`, Math.min(40, targetTemp + 1))} />
                <TargetAdjuster label="Hedef Nem" value={targetHum} unit="%" onDecrease={() => onUpdate(`${zoneKey}_targetHum`, Math.max(30, targetHum - 5))} onIncrease={() => onUpdate(`${zoneKey}_targetHum`, Math.min(90, targetHum + 5))} />
@@ -373,8 +383,10 @@
       const [sera, setSera] = useState({ 
         auto: false, 
         waterLevel: 0, 
-        left: { temp: 0, hum: 0, soil: 0, pump: false, fan: false, targetTemp: 25, targetHum: 50, targetSoil: 50, scheduledTime: "08:00", scheduleActive: false }, 
-        right: { temp: 0, hum: 0, soil: 0, pump: false, fan: false, targetTemp: 25, targetHum: 50, targetSoil: 50, scheduledTime: "19:00", scheduleActive: false },
+        intakeFan: false,
+        exhaustFan: false,
+        left: { temp: 0, hum: 0, soil: 0, pump: false, targetTemp: 25, targetHum: 50, targetSoil: 50, scheduledTime: "08:00", scheduleActive: false }, 
+        right: { temp: 0, hum: 0, soil: 0, pump: false, targetTemp: 25, targetHum: 50, targetSoil: 50, scheduledTime: "19:00", scheduleActive: false },
         nodes: Array(5).fill({t: 0, h: 0, s: 0})
       });
 
@@ -414,7 +426,6 @@
                   hum: gv(`${prefix}_hum`, 0), 
                   soil: gv(`${prefix}_soil`, 0),
                   pump: gv(`${prefix}_pump`, false), 
-                  fan: gv(`${prefix}_fan`, false),
                   targetTemp: gv(`${prefix}_targetTemp`, 25), 
                   targetHum: gv(`${prefix}_targetHum`, 50), 
                   targetSoil: gv(`${prefix}_targetSoil`, 50),
@@ -426,8 +437,6 @@
               const leftZone = parseZone("left");
               const rightZone = parseZone("right");
 
-              // GÜÇLENDİRİLMİŞ FALLBACK (YEDEKLEME) ALGORİTMASI
-              // Eğer sensörler 0 gönderiyorsa veya henüz karta bağlanmamışsa alt kartlardaki değerleri (Sol/Sağ) gösterir.
               const parseNodes = () => {
                 const getVal = (key, fallback) => {
                    let val = gv(key, null);
@@ -445,6 +454,9 @@
               setSera({ 
                 auto: gv("auto", false), 
                 waterLevel: gv("waterLevel", 0), 
+                // ESP32'de değişiklik yapmamak için left_fan'ı giriş, right_fan'ı çıkış olarak eşliyoruz
+                intakeFan: gv("left_fan", false),
+                exhaustFan: gv("right_fan", false),
                 left: leftZone, 
                 right: rightZone,
                 nodes: parseNodes()
@@ -460,7 +472,7 @@
         await window.FB.setDoc(ref, { [field]: value }, { merge: true }).catch(console.error);
       };
 
-      // CANLI OTONOM KARAR MOTORU
+      // CANLI OTONOM KARAR MOTORU (GÜNCELLENDİ)
       useEffect(() => {
         if (!user) return;
         const controlInterval = setInterval(() => {
@@ -471,23 +483,27 @@
           const now = new Date();
           const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+          let needVentilation = false;
+
           ['left', 'right'].forEach(zKey => {
             const z = current[zKey];
             
             if (!current.auto && !z.scheduleActive) return;
 
-            let { temp: t, hum: h, soil: s, pump, fan, targetTemp, targetHum, targetSoil, scheduledTime, scheduleActive } = z;
+            let { temp: t, hum: h, soil: s, pump, targetTemp, targetHum, targetSoil, scheduledTime, scheduleActive } = z;
             let initialPump = z.pump;
-            let initialFan = z.fan;
 
+            // Sıcaklık veya Nem yüksekse merkezi havalandırmaya ihtiyaç var demektir
             if (current.auto) {
-              if (t > targetTemp || h > targetHum) fan = true;
-              else if (t <= targetTemp && h <= targetHum) fan = false;
+              if (t > targetTemp || h > targetHum) {
+                  needVentilation = true;
+              }
               
               if (s < targetSoil - 1 || h < targetHum) pump = true;
               else if (s >= targetSoil + 1 && h >= targetHum) pump = false;
             }
 
+            // Zamanlanmış Sulama
             if (scheduleActive && scheduledTime === currentHHMM) {
                if (s < targetSoil + 1) pump = true; 
                else pump = false; 
@@ -496,9 +512,25 @@
             if (waterLow && pump) pump = false;
 
             if (pump !== initialPump) changedData[`${zKey}_pump`] = pump;
-            if (fan !== initialFan) changedData[`${zKey}_fan`] = fan;
           });
           
+          // Merkezi Havalandırma (Push-Pull) Kararı
+          if (current.auto) {
+             let newIntake = current.intakeFan;
+             let newExhaust = current.exhaustFan;
+
+             if (needVentilation) {
+                 newIntake = true;
+                 newExhaust = true;
+             } else {
+                 newIntake = false;
+                 newExhaust = false;
+             }
+
+             if (newIntake !== current.intakeFan) changedData['left_fan'] = newIntake; // Sol fan pini Giriş fanı oldu
+             if (newExhaust !== current.exhaustFan) changedData['right_fan'] = newExhaust; // Sağ fan pini Çıkış fanı oldu
+          }
+
           if (Object.keys(changedData).length > 0) {
             const ref = window.FB.doc(window.FB.db, "artifacts", window.APP_ID, "public", "data", "greenhouse", "status");
             window.FB.setDoc(ref, changedData, { merge: true }).catch(console.error);
@@ -544,7 +576,7 @@
               <div className="w-12 h-12 rounded-xl bg-emerald-600 flex items-center justify-center text-2xl shadow-lg">🌱</div>
               <div>
                 <div className="text-xl font-black tracking-tight text-white">AKILLI SERA</div>
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> CANLI SİSTEM DEVREDE</div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> PUSH-PULL İKLİMLENDİRME</div>
               </div>
             </div>
             <button onClick={() => { setLoggedIn(false); setPin(""); }} className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-bold btn-touch hover:bg-white/10">ÇIKIŞ</button>
@@ -552,10 +584,13 @@
 
           <main className="max-w-6xl mx-auto px-4 py-8 animate-[fadeIn_0.3s_ease-out]">
             
-            <GreenhouseVisualizer left={sera.left} right={sera.right} nodes={sera.nodes} />
+            <GreenhouseVisualizer left={sera.left} right={sera.right} nodes={sera.nodes} intakeFan={sera.intakeFan} exhaustFan={sera.exhaustFan} />
 
-            <div className="max-w-xl mx-auto mb-8 space-y-4">
-              <div className={`glass-panel rounded-2xl p-5 flex flex-col gap-3 ${waterLow ? 'danger-pulse' : 'border border-white/5'}`}>
+            {/* MERKEZİ KONTROL PANELİ */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto mb-10">
+              
+              {/* Su Deposu */}
+              <div className={`glass-panel rounded-2xl p-5 flex flex-col gap-3 justify-center ${waterLow ? 'danger-pulse' : 'border border-white/5'}`}>
                 <div className="flex justify-between items-center text-sm font-bold uppercase tracking-widest">
                   <span className="text-blue-300 flex items-center gap-2">🌊 Ana Su Deposu</span>
                   <span className={waterLow ? 'text-red-400' : 'text-emerald-400'}>%{Math.round(sera.waterLevel)}</span>
@@ -563,27 +598,41 @@
                 <div className="w-full bg-slate-900 rounded-full h-4 overflow-hidden border border-white/5">
                   <div className={`h-full transition-all duration-1000 ${waterLow ? 'bg-red-500' : (sera.waterLevel < 45 ? 'bg-amber-500' : 'bg-blue-500')}`} style={{ width: `${sera.waterLevel}%` }}></div>
                 </div>
-                {waterLow && <div className="text-xs text-red-400 font-bold mt-1 text-center bg-red-500/10 p-3 rounded-lg">⚠️ KRİTİK SEVİYE! POMPALAR DURDURULDU. LÜTFEN DEPOYU DOLDURUN.</div>}
-                {(!waterLow && sera.waterLevel < 45) && <div className="text-xs text-amber-400 font-bold mt-1 text-center bg-amber-500/10 p-3 rounded-lg">⚠️ UYARI: Su Seviyesi Yarıdan Aşağı Düştü!</div>}
+                {waterLow && <div className="text-xs text-red-400 font-bold mt-1 text-center bg-red-500/10 p-3 rounded-lg">⚠️ DEPO BOŞ! POMPALAR DURDURULDU.</div>}
               </div>
 
+              {/* Otonom Toggle */}
               <button onClick={() => updateSeraFlat("auto", !sera.auto)} className={`w-full rounded-2xl p-5 flex items-center justify-between border btn-touch transition-all shadow-lg ${sera.auto ? "bg-gradient-to-r from-indigo-600 to-purple-600 border-indigo-400/50" : "bg-slate-800/80 border-white/10 text-slate-300"}`}>
                 <div className="flex items-center gap-4">
                   <div className="text-4xl">🤖</div>
                   <div className="text-left">
                     <div className="text-lg font-black uppercase tracking-wider text-white">Otonom Sistem</div>
-                    <div className="text-xs text-white/70">{sera.auto ? "Yapay Zeka Devrede" : "Sistem Manuel Kontrolde"}</div>
+                    <div className="text-xs text-white/70">{sera.auto ? "Yapay Zeka Tüm Kontrolü Sağlıyor" : "Sistem Manuel Kontrolde"}</div>
                   </div>
                 </div>
                 <div className={`w-16 h-8 rounded-full p-1.5 transition-all ${sera.auto ? "bg-white/30" : "bg-slate-900"}`}>
                   <div className={`w-5 h-5 bg-white rounded-full transition-all ${sera.auto ? "translate-x-8" : "translate-x-0"}`}></div>
                 </div>
               </button>
+
+              {/* YENİ: Merkezi Havalandırma (Push-Pull) Kartı */}
+              <div className="glass-panel rounded-2xl p-5 border border-white/5 shadow-xl col-span-1 md:col-span-2 mt-2">
+                 <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2"><span>🌬️</span> Merkezi İklimlendirme (Push-Pull)</h3>
+                    {sera.auto && <span className="text-[10px] font-black bg-indigo-500/20 text-indigo-300 px-3 py-1.5 rounded-lg border border-indigo-500/30">OTONOM YÖNETİMDE</span>}
+                 </div>
+                 <div className="grid grid-cols-2 gap-4">
+                    {/* ESP32 pin yapısını korumak için left_fan giriş, right_fan çıkış olarak veritabanına yazılır */}
+                    <SimpleToggle label="Taze Hava Bas (Giriş)" emoji="🍃" active={sera.intakeFan} disabled={sera.auto} onClick={() => updateSeraFlat('left_fan', !sera.intakeFan)} activeColorClass="bg-cyan-600 shadow-[0_0_15px_#0891b2] text-white" />
+                    <SimpleToggle label="Sıcaklığı Tahliye Et (Egzoz)" emoji="💨" active={sera.exhaustFan} disabled={sera.auto} onClick={() => updateSeraFlat('right_fan', !sera.exhaustFan)} activeColorClass="bg-rose-600 shadow-[0_0_15px_#e11d48] text-white" />
+                 </div>
+              </div>
+
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
-              <ZoneCard zoneKey="left" title="Sol Bölge Detayları" data={sera.left} onUpdate={updateSeraFlat} autoMode={sera.auto} waterLow={waterLow} />
-              <ZoneCard zoneKey="right" title="Sağ Bölge Detayları" data={sera.right} onUpdate={updateSeraFlat} autoMode={sera.auto} waterLow={waterLow} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <ZoneCard zoneKey="left" title="Sol Bölge Detayları" data={sera.left} onUpdate={updateSeraFlat} autoMode={sera.auto} waterLow={waterLow} globalIntake={sera.intakeFan} globalExhaust={sera.exhaustFan} />
+              <ZoneCard zoneKey="right" title="Sağ Bölge Detayları" data={sera.right} onUpdate={updateSeraFlat} autoMode={sera.auto} waterLow={waterLow} globalIntake={sera.intakeFan} globalExhaust={sera.exhaustFan} />
             </div>
           </main>
         </div>
@@ -594,4 +643,4 @@
     root.render(<App />);
   </script>
 </body> 
-</html> 
+</html>

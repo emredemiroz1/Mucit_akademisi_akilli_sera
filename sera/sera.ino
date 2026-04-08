@@ -27,8 +27,8 @@
 #define SOIL_2 33          
 #define SOIL_3 34          
 #define SOIL_4 35          
-#define SOIL_5 39          
-#define WATER_TANK_PIN 36  
+#define SOIL_5 39 //VN
+#define WATER_TANK_PIN 36 //VP
 
 // 2. DHT11 Sensörleri
 #define DHT_1_PIN 4   
@@ -46,8 +46,8 @@ DHT dht5(DHT_5_PIN, DHTTYPE);
 
 // 3. L298N Sürücü 1 (Su Pompaları)
 #define PUMP_L_IN1 27  
-#define PUMP_L_IN2 16  
-#define PUMP_R_IN3 17  
+#define PUMP_L_IN2 16  //rx
+#define PUMP_R_IN3 17  //tx
 #define PUMP_R_IN4 18  
 
 // 4. L298N Sürücü 2 (Fanlar)
